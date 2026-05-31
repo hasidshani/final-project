@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>יצירת שיעור חדש | אורייתא</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- The navigation bar-->
+    <nav class="navbar">
+        <div class="nav-right">
+            <div class="logo">אורייתא ✡</div>
+            <ul class="nav-links">
+                <li><a href="home_page.html">דף הבית</a></li>
+                <li><a href="all_lessons.html">כל השיעורים</a></li>
+                <li><a href="dashboard.html">לוח בקרה</a></li>
+            </ul>
+        </div>
+        <!-- The username will be updated dynamically here after login, for now it is empty -->
+        <div class="nav-left" id="auth-status">
+        </div>
+    </nav>
+
+    <main class="form-page-container">
+        <div class="form-card-wide">
+            <header class="form-header">
+                <h1>יצירת שיעור חדש</h1>
+                <p>מלאו את הפרטים כדי לפרסם שיעור תורה חדש בקהילה</p>
+            </header>
+
+            <form class="create-lesson-form">
+                <div class="form-row">
+                    <div class="form-group-full">
+                        <label for="lesson-title">שם השיעור</label>
+                        <input type="text" id="lesson-title" placeholder="לדוגמה: עומק הפרשה בחיי היום-יום" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group-full">
+                        <label for="lesson-desc">תיאור השיעור</label>
+                        <textarea id="lesson-desc" rows="5" placeholder="ספרו קצת על התכנים שיועברו בשיעור, למי הוא מתאים ומה כדאי להביא..." required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row-split">
+                    <div class="form-group">
+                        <label for="category">קטגוריה</label>
+                        <select id="category" required>
+                            <option value="" disabled selected>בחרו קטגוריה</option>
+                            <option value="chasidut">חסידות</option>
+                            <option value="musar">מוסר</option>
+                            <option value="halacha">הלכה</option>
+                            <option value="mishna">משנה</option>
+                            <option value="gemara">גמרא</option>
+                            <option value="parasha">פרשת שבוע</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="city">עיר</label>
+                        <select id="city" required>
+                            <option value="" disabled selected>בחרו עיר</option>
+                            <option value="pardes-hana">פרדס חנה</option>
+                            <option value="netanya">נתניה</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row-split">
+                    <div class="form-group">
+                        <label for="date">תאריך</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="time">שעה</label>
+                        <input type="time" id="time" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group-full">
+                        <label>תמונת השיעור</label>
+                        <div class="file-upload-wrapper">
+                            <input type="file" id="lesson-image" class="file-input" accept="image/*">
+                            <label for="lesson-image" class="file-upload-label">
+                                <span class="upload-icon">📸</span>
+                                <span class="upload-text">לחצו להעלאת תמונה או גררו לכאן</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-footer">
+                    <button type="submit" class="btn-publish">פרסם שיעור ←</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- The footer section -->
+    <footer class="footer">
+    <div class="footer-top">
+        <div class="footer-col">
+            <div class="logo">אורייתא ✡</div>
+            <p>מחברים קהילות דרך לימוד תורה</p>
+        </div>
+
+        <div class="footer-col">
+            <!--links for use resources-->
+            <h4>פלטפורמה</h4>
+            <a href="create_lesson.html">יצירת שיעור ⊕</a>
+            <a href="dashboard.html">לוח בקרה</a>
+        </div>
+
+        <div class="footer-col">
+            <!--links for useful resources-->
+            <h4>קישורים שימושיים</h4>
+            <a href="home_page.html">דף הבית</a>
+            <a href="all_lessons.html">כל השיעורים</a>
+        </div>
+    </div>
+    
+    <div class="footer-bottom">
+        © 2026 אורייתא. כל הזכויות שמורות.
+    </div>
+</footer>
+    </footer>
+
+</body>
+</html>

@@ -9,7 +9,6 @@ app.get('/', (req, res) => {
 });
 
 
-
 /*
 const express = require('express');
 const mongoose = require('mongoose');
@@ -17,7 +16,7 @@ const bodyParser = require('body-parser');
 const path = require('path'); 
 require('dotenv').config();
 const app = express();
-/*
+/
 const app = require('./app'); // Import the configured app from app.js
 require('dotenv').config(); // Load environment variables from .env
 */
@@ -27,4 +26,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server is running remotely and listening on port http://localhost:${PORT}`);
 });
+
+
 

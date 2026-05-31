@@ -14,8 +14,13 @@ const userSchema = new mongoose.Schema({
     password: { 
         type: String,     // Rule: Must be text characters
         required: true    // Rule: You cannot leave this blank!
+    },
+    phone: {
+        type: String,     // Rule: Must be text characters
+        required: true    // Rule: You cannot leave this blank!
     }
 });
 
 // 2. You build the active tool (Model) out of that template rulebook
 module.exports = mongoose.model('User', userSchema);
+

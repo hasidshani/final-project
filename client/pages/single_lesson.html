@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פרטי השיעור | אורייתא</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- The navigation bar-->
+    <nav class="navbar">
+        <div class="nav-right">
+            <div class="logo">אורייתא ✡</div>
+            <ul class="nav-links">
+                <li><a href="home_page.html">דף הבית</a></li>
+                <li><a href="all_lessons.html">כל השיעורים</a></li>
+                <li><a href="dashboard.html">לוח בקרה</a></li>
+            </ul>
+        </div>
+        <div class="nav-left">
+            <button class="btn-outline">יצירת שיעור ⊕</button>
+            <span class="user-link">התחברות 👤</span>
+        </div>
+    </nav>
+
+    <div class="lesson-banner">
+        <img src="https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=1200&auto=format&fit=crop" alt="Torah Study Banner">
+        <span class="banner-tag">פרשת שבוע</span>
+    </div>
+
+    <main class="single-lesson-container">
+        <div class="lesson-layout">
+            
+            <div class="lesson-main-col">
+                <h1 class="lesson-page-title">מעמיק בפרשת וירא</h1>
+                
+                <div class="lesson-meta-bar">
+                    <span>📍 פרדס חנה</span>
+                    <span class="meta-divider">|</span>
+                    <span>📅 12 במאי 2026</span>
+                    <span class="meta-divider">|</span>
+                    <span>🕒 19:00</span>
+                </div>
+
+                <div class="lesson-description">
+                    <p>הצטרפו אלינו לשיעור מעמיק ומרתק בפרשת השבוע. בשיעור זה נצלול אל נבכי פרשת וירא, נבחן את סיפורי האבות דרך מדרשי חז"ל ופרשני המקרא הקלאסיים, ונחלץ תובנות רוחניות ומוסריות לחיי היומיום שלנו בעידן המודרני.</p>
+                    <p>השיעור מתאים לכל הרמות וכולל זמן לשאלות ותשובות ודיון פתוח בין המשתתפים. מומלץ להביא חומש וכלי כתיבה.</p>
+                </div>
+
+                <div class="rating-summary-box">
+                    <span class="rating-stars">⭐ 4.8</span>
+                    <span class="rating-count">(על בסיס 12 ביקורות)</span>
+                </div>
+
+                <section class="reviews-section">
+                    <h2>מה אומרים המשתתפים</h2>
+                    
+                    <div class="reviews-list">
+                        <div class="review-card">
+                            <div class="review-header">
+                                <span class="reviewer-name">משה לוי</span>
+                                <span class="review-stars">⭐⭐⭐⭐⭐</span>
+                            </div>
+                            <p class="review-comment">שיעור מדהים! הרב מצליח לחבר את פשט הפסוקים לחיי המעשה בצורה יוצאת מן הכלל. מומלץ בחום לכל מי שרוצה להעמיק.</p>
+                        </div>
+
+                        <div class="review-card">
+                            <div class="review-header">
+                                <span class="reviewer-name">רחל גולדשטיין</span>
+                                <span class="review-stars">⭐⭐⭐⭐</span>
+                            </div>
+                            <p class="review-comment">תוכן מעולה ומאיר עיניים. האווירה בשיעור נעימה מאוד ומזמינה דיון פתוח. מחכה כבר לשיעור הבא בשבוע הבא.</p>
+                        </div>
+                    </div>
+
+                    <div class="add-review-box">
+                        <h3>הוסיפו ביקורת</h3>
+                        <form class="review-form">
+                            <div class="form-group">
+                                <label>דירוג:</label>
+                                <select class="rating-selector">
+                                    <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                                    <option value="4">⭐⭐⭐⭐ (4)</option>
+                                    <option value="3">⭐⭐⭐ (3)</option>
+                                    <option value="2">⭐⭐ (2)</option>
+                                    <option value="1">⭐ (1)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>התגובה שלכם:</label>
+                                <textarea class="review-textarea" rows="4" placeholder="כתבו את התרשמותכם מהשיעור..."></textarea>
+                            </div>
+                            <button type="submit" class="btn-submit-review">שליחת ביקורת</button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+
+            <div class="lesson-side-col">
+    <button class="btn-favorite">❤️ שמירה במועדפים</button>
+    <button class="btn-register">📋 הירשם לשיעור</button>
+    
+    <!-- participants section - only shows after registering -->
+    <div class="participants-box">
+        <h3>👥 משתתפים בשיעור</h3>
+        <div class="participant-item">
+            <span>שרה כהן</span>
+            <span class="participant-phone">📞 050-123-4567</span>
+        </div>
+        <div class="participant-item">
+            <span>משה לוי</span>
+            <span class="participant-no-phone">ללא טלפון</span>
+        </div>
+    </div>
+</div>
+
+        </div>
+    </main>
+
+     <!-- The footer section -->
+    <footer class="footer">
+    <div class="footer-top">
+        <div class="footer-col">
+            <div class="logo">אורייתא ✡</div>
+            <p>מחברים קהילות דרך לימוד תורה</p>
+        </div>
+
+        <div class="footer-col">
+            <!--links for use resources-->
+            <h4>פלטפורמה</h4>
+            <a href="create_lesson.html">יצירת שיעור ⊕</a>
+            <a href="dashboard.html">לוח בקרה</a>
+        </div>
+
+        <div class="footer-col">
+            <!--links for useful resources-->
+            <h4>קישורים שימושיים</h4>
+            <a href="home_page.html">דף הבית</a>
+            <a href="all_lessons.html">כל השיעורים</a>
+        </div>
+    </div>
+    
+    <div class="footer-bottom">
+        © 2026 אורייתא. כל הזכויות שמורות.
+    </div>
+</footer>
+
+</body>
+</html>

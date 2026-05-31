@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כל השיעורים | אורייתא</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- The navigation bar-->
+    <nav class="navbar">
+        <div class="nav-right">
+            <div class="logo">אורייתא ✡</div>
+            <ul class="nav-links">
+                <li><a href="home_page.html">דף הבית</a></li>
+                <li><a href="dashboard.html">לוח בקרה</a></li>
+            </ul>
+        </div>
+        <div class="nav-left">
+            <button class="btn-outline">יצירת שיעור ⊕</button>
+            <span class="user-link">התחברות 👤</span>
+        </div>
+    </nav>
+
+    <header class="search-header">
+        <h1>כל השיעורים</h1>
+        
+        <div class="search-bar-container">
+            <input type="text" class="search-input" placeholder="חפשו שיעור, נושא או שם של מורה...">
+            <button class="btn-search">🔍 חפשו</button>
+        </div>
+
+        <div class="filter-row">
+            <div class="category-buttons">
+                <button class="filter-btn active">הכל</button>
+                <button class="filter-btn">חסידות</button>
+                <button class="filter-btn">מוסר</button>
+                <button class="filter-btn">הלכה</button>
+                <button class="filter-btn">משנה</button>
+                <button class="filter-btn">גמרא</button>
+                <button class="filter-btn">פרשת שבוע</button>
+            </div>
+            
+            <div class="city-dropdown-box">
+                <select class="city-select-dropdown">
+                    <option value="">כל הערים</option>
+                    <option value="pardes-hana">פרדס חנה</option>
+                    <option value="netanya">נתניה</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="lessons-search-container">
+        <div class="search-lessons-grid">
+            
+            <div class="lesson-search-card">
+                <div class="card-image-box">
+                    <img src="https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop" alt="Lesson Graphic">
+                    <span class="card-tag">פרשת שבוע</span>
+                </div>
+                <div class="card-body-content">
+                    <div class="card-rating">⭐ 4.8</div>
+                    <h3>מעמיק בפרשת וירא</h3>
+                    <p class="teacher-name">הרב דוד כהן</p>
+                    <div class="card-meta-details">
+                        <span>📍 פרדס חנה</span>
+                        <span>📅 12 במאי 2026 | 🕒 19:00</span>
+                    </div>
+                    <a href="single_lesson.html" class="btn-details-action">לפרטים נוספים</a>
+                </div>
+            </div>
+
+            <div class="lesson-search-card">
+                <div class="card-image-box">
+                    <img src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=400&auto=format&fit=crop" alt="Lesson Graphic">
+                    <span class="card-tag">גמרא</span>
+                </div>
+                <div class="card-body-content">
+                    <div class="card-rating">⭐ 4.5</div>
+                    <h3>מבוא ללימוד התלמוד</h3>
+                    <p class="teacher-name">הרבנית שרה לוי</p>
+                    <div class="card-meta-details">
+                        <span>📍 נתניה</span>
+                        <span>📅 13 במאי 2026 | 🕒 18:30</span>
+                    </div>
+                    <a href="single_lesson.html" class="btn-details-action">לפרטים נוספים</a>
+                </div>
+            </div>
+
+            <div class="lesson-search-card">
+                <div class="card-image-box">
+                    <img src="https://images.unsplash.com/photo-1435527173128-983b87a01f4d?q=80&w=400&auto=format&fit=crop" alt="Lesson Graphic">
+                    <span class="card-tag">הלכה</span>
+                </div>
+                <div class="card-body-content">
+                    <div class="card-rating">⭐ 4.9</div>
+                    <h3>הלכות שבת למעשה</h3>
+                    <p class="teacher-name">הרב אברהם מזרחי</p>
+                    <div class="card-meta-details">
+                        <span>📍 פרדס חנה</span>
+                        <span>📅 15 במאי 2026 | 🕒 20:00</span>
+                    </div>
+                    <a href="single_lesson.html" class="btn-details-action">לפרטים נוספים</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <!-- The footer section -->
+    <footer class="footer">
+    <div class="footer-top">
+        <div class="footer-col">
+            <div class="logo">אורייתא ✡</div>
+            <p>מחברים קהילות דרך לימוד תורה</p>
+        </div>
+
+        <div class="footer-col">
+            <!--links for use resources-->
+            <h4>פלטפורמה</h4>
+            <a href="create_lesson.html">יצירת שיעור ⊕</a>
+            <a href="dashboard.html">לוח בקרה</a>
+        </div>
+
+        <div class="footer-col">
+            <!--links for useful resources-->
+            <h4>קישורים שימושיים</h4>
+            <a href="home_page.html">דף הבית</a>
+            <a href="all_lessons.html">כל השיעורים</a>
+        </div>
+    </div>
+    
+    <div class="footer-bottom">
+        © 2026 אורייתא. כל הזכויות שמורות.
+    </div>
+</footer>

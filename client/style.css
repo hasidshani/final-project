@@ -550,3 +550,912 @@ body {
     height: 100%;
     object-fit: cover;
 }
+/* ==========================================================================
+   Lessons Explorer Platform Page Styles
+   ========================================================================== */
+.search-header {
+    text-align: center;
+    padding: 50px 8% 30px;
+    background-color: #fff;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.search-header h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 25px;
+}
+
+.search-bar-container {
+    display: flex;
+    max-width: 700px;
+    margin: 0 auto 30px auto;
+    gap: 10px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 15px 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 1rem;
+    background-color: var(--bg-creme);
+    text-align: right;
+}
+
+.btn-search {
+    background-color: var(--dark-text);
+    color: white;
+    border: none;
+    padding: 0 30px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.filter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1000px;
+    margin: 0 auto;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.category-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--muted-text);
+    transition: all 0.2s;
+}
+
+.filter-btn:hover,
+.filter-btn.active {
+    background-color: var(--gold);
+    color: white;
+    border-color: var(--gold);
+}
+
+.city-select-dropdown {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #e0e0e0;
+    background-color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    cursor: pointer;
+}
+
+.lessons-search-container {
+    padding: 50px 8%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.search-lessons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.lesson-search-card {
+    background: var(--white);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    border: 1px solid #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+    transition: transform 0.3s;
+}
+
+.lesson-search-card:hover {
+    transform: translateY(-5px);
+}
+
+.card-image-box {
+    position: relative;
+    height: 180px;
+}
+
+.card-image-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-tag {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: var(--gold);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.card-body-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.card-rating {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--dark-text);
+    margin-bottom: 6px;
+}
+
+.card-body-content h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    line-height: 1.3;
+}
+
+.teacher-name {
+    color: var(--muted-text);
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+}
+
+.card-meta-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: #777;
+    margin-bottom: 20px;
+    border-top: 1px solid #f6f6f6;
+    padding-top: 12px;
+}
+
+.btn-details-action {
+    margin-top: auto;
+    background-color: #fff;
+    border: 1px solid var(--dark-text);
+    color: var(--dark-text);
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    text-decoration: none;
+}
+
+.btn-details-action:hover {
+    background-color: var(--dark-text);
+    color: white;
+}
+
+@media (max-width: 992px) {
+    .search-lessons-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 650px) {
+    .search-lessons-grid { grid-template-columns: 1fr; }
+    .filter-row { flex-direction: column; align-items: stretch; }
+}
+/* ==========================================================================
+   Single Lesson Event Detail Page Styles
+   ========================================================================== */
+.lesson-banner {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    overflow: hidden;
+}
+
+.lesson-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.banner-tag {
+    position: absolute;
+    top: 25px;
+    right: 8%;
+    background-color: var(--gold);
+    color: white;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.single-lesson-container {
+    padding: 50px 8%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.lesson-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 40px;
+    align-items: start;
+}
+
+/* Main Column Design */
+.lesson-main-col {
+    text-align: right;
+}
+
+.lesson-page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 15px;
+}
+
+.lesson-meta-bar {
+    display: flex;
+    gap: 15px;
+    color: var(--muted-text);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 30px;
+}
+
+.meta-divider {
+    color: #ddd;
+}
+
+.lesson-description {
+    font-size: 1.15rem;
+    line-height: 1.7;
+    color: #333;
+    margin-bottom: 40px;
+}
+
+.lesson-description p {
+    margin-bottom: 15px;
+}
+
+.rating-summary-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: var(--white);
+    padding: 15px 20px;
+    border-radius: 12px;
+    border: 1px solid #f0f0f0;
+    width: fit-content;
+    margin-bottom: 50px;
+}
+
+.rating-stars {
+    font-weight: 800;
+    font-size: 1.2rem;
+}
+
+.rating-count {
+    color: var(--muted-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Side Column Widgets */
+.lesson-side-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: sticky;
+    top: 30px;
+}
+
+.btn-favorite {
+    width: 100%;
+    background-color: var(--white);
+    border: 1px solid #e0e0e0;
+    color: var(--dark-text);
+    padding: 15px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    transition: all 0.2s;
+}
+
+.btn-favorite:hover {
+    background-color: #fff5f5;
+    border-color: #ffcdd2;
+    color: #d32f2f;
+}
+
+.teacher-info-card {
+    background-color: var(--white);
+    border: 1px solid #f0f0f0;
+    border-radius: 16px;
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.teacher-avatar {
+    width: 70px;
+    height: 70px;
+    background-color: #f0f0f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    border: 2px solid var(--gold);
+}
+
+.teacher-profile-link {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--dark-text);
+    text-decoration: none;
+}
+
+.teacher-profile-link:hover {
+    color: var(--gold);
+}
+
+.view-profile-btn {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gold);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--gold);
+    padding-bottom: 2px;
+}
+
+/* Reviews List Area */
+.reviews-section h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 25px;
+}
+
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 45px;
+}
+
+.review-card {
+    background-color: var(--white);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #f0f0f0;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.reviewer-name {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.review-stars {
+    font-size: 0.9rem;
+}
+
+.review-comment {
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* Forms Processing */
+.add-review-box {
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 16px;
+    padding: 30px;
+}
+
+.add-review-box h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.rating-selector,
+.review-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background-color: var(--bg-creme);
+    font-size: 0.95rem;
+    text-align: right;
+}
+
+.review-textarea {
+    resize: vertical;
+}
+
+.btn-submit-review {
+    background-color: var(--dark-text);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-submit-review:hover {
+    background-color: var(--gold);
+}
+
+/* Responsive Structural Overrides */
+@media (max-width: 900px) {
+    .lesson-layout {
+        grid-template-columns: 1fr;
+    }
+    .lesson-side-col {
+        position: static;
+        order: -1; /* Pushes teacher info and save button above content on tiny displays */
+    }
+    .lesson-banner {
+        height: 240px;
+    }
+}
+/* ==========================================================================
+   Create Lesson Form Page Styles
+   ========================================================================== */
+.form-page-container {
+    padding: 60px 8%;
+    display: flex;
+    justify-content: center;
+    background-color: var(--bg-creme);
+}
+
+.form-card-wide {
+    background-color: var(--white);
+    width: 100%;
+    max-width: 800px;
+    padding: 50px;
+    border-radius: 20px;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.04);
+    border: 1px solid #eee;
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.form-header h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.form-header p {
+    color: var(--muted-text);
+    font-size: 1.1rem;
+}
+
+/* Form Row Mechanics */
+.create-lesson-form {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.form-group, .form-group-full {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: right;
+}
+
+.form-row-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group-full {
+    width: 100%;
+}
+
+.create-lesson-form label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--dark-text);
+}
+
+.create-lesson-form input[type="text"],
+.create-lesson-form textarea,
+.create-lesson-form select,
+.create-lesson-form input[type="date"],
+.create-lesson-form input[type="time"] {
+    padding: 14px 18px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 1rem;
+    background-color: #fafafa;
+    width: 100%;
+    text-align: right;
+    transition: border-color 0.2s;
+}
+
+.create-lesson-form input:focus,
+.create-lesson-form textarea:focus,
+.create-lesson-form select:focus {
+    outline: none;
+    border-color: var(--gold);
+    background-color: #fff;
+}
+
+/* Styled File Upload Zone */
+.file-upload-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.file-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.file-upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    border: 2px dashed #ddd;
+    border-radius: 15px;
+    background-color: #fcfcfc;
+    transition: 0.2s;
+}
+
+.upload-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.upload-text {
+    color: var(--muted-text);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.file-input:hover + .file-upload-label {
+    border-color: var(--gold);
+    background-color: #fdfaf3;
+}
+
+/* Submit Section */
+.form-footer {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.btn-publish {
+    background-color: var(--dark-text);
+    color: white;
+    border: none;
+    padding: 16px 50px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-publish:hover {
+    background-color: var(--gold);
+}
+
+/* Responsive Overrides */
+@media (max-width: 600px) {
+    .form-card-wide {
+        padding: 30px 20px;
+    }
+    .form-row-split {
+        grid-template-columns: 1fr;
+    }
+}
+/* ==========================================================================
+   Teacher LinkedIn-Style Profile View Layout
+   ========================================================================== */
+.profile-cover-banner {
+    width: 100%;
+    height: 180px;
+    background: linear-gradient(135deg, #e9e5d9 0%, #f4eee1 100%);
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.profile-identity-container {
+    max-width: 900px;
+    margin: -70px auto 40px auto;
+    background-color: var(--white);
+    border-radius: 20px;
+    padding: 0 40px 40px 40px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    border: 1px solid #eee;
+    text-align: center;
+    position: relative;
+}
+
+.profile-avatar-wrapper {
+    width: 130px;
+    height: 130px;
+    background-color: #f9f9f9;
+    border-radius: 50%;
+    border: 4px solid var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    margin: 0 auto 20px auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+.profile-teacher-name {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--dark-text);
+    margin-bottom: 15px;
+}
+
+.profile-teacher-bio {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: #444;
+    max-width: 750px;
+    margin: 0 auto 30px auto;
+}
+
+/* Horizontal Info Badges Panel */
+.profile-stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 25px;
+}
+
+.profile-stat-badge {
+    background-color: var(--bg-creme);
+    border: 1px solid #eef0ed;
+    padding: 10px 20px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stat-badge-icon {
+    font-size: 1.1rem;
+}
+
+.stat-badge-text {
+    font-size: 0.95rem;
+    color: var(--dark-text);
+    font-weight: 600;
+}
+
+.stat-badge-text strong {
+    color: var(--gold);
+    font-weight: 800;
+}
+
+/* Lower Section Gallery Header Elements */
+.teacher-catalog-container {
+    padding: 20px 8% 60px 8%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.catalog-section-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 30px;
+    text-align: right;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+.catalog-section-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 60px;
+    height: 3px;
+    background-color: var(--gold);
+    border-radius: 2px;
+}
+
+/* Responsive Structural Layout Overrides */
+@media (max-width: 768px) {
+    .profile-identity-container {
+        margin: -50px 20px 30px 20px;
+        padding: 0 20px 30px 20px;
+    }
+    .profile-avatar-wrapper {
+        width: 100px;
+        height: 100px;
+        font-size: 2.5rem;
+        margin-top: -50px;
+    }
+    .profile-teacher-name {
+        font-size: 1.8rem;
+    }
+    .profile-stats-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .profile-stat-badge {
+        justify-content: center;
+    }
+}
+/* ==========================================================================
+   404 Page Styles (Isolated)
+   ========================================================================== */
+.error-page-html, .error-page-body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background-color: #FAF9F6 !important; /* מבטיח רקע נקי רק לעמוד זה */
+    font-family: 'Assistant', sans-serif;
+    overflow: hidden; /* נועל גלילה אך ורק בדף ה-404 */
+}
+
+/* Top Right Logo Alignment */
+.error-logo-container {
+    position: absolute;
+    top: 25px;
+    right: 8%;
+}
+
+.error-logo-link {
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: #1A1A1A;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.error-logo-link:hover {
+    color: #D4A373;
+}
+
+/* Center Canvas Mechanics */
+.error-center-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100%;
+    padding: 20px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.error-icon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    line-height: 1;
+}
+
+.error-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1A1A1A;
+    margin-bottom: 12px;
+}
+
+.error-subtitle {
+    font-size: 1.15rem;
+    color: #666;
+    max-width: 520px;
+    margin: 0 auto 35px auto;
+    line-height: 1.6;
+}
+
+/* Side-by-Side Action Button Flex Row */
+.error-actions-row {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-error-primary {
+    background-color: #1A1A1A;
+    color: #FFFFFF;
+    text-decoration: none;
+    padding: 14px 30px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+}
+
+.btn-error-primary:hover {
+    background-color: #D4A373;
+}
+
+.btn-error-secondary {
+    background-color: transparent;
+    color: #1A1A1A;
+    text-decoration: none;
+    padding: 13px 30px;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.btn-error-secondary:hover {
+    border-color: #D4A373;
+    color: #D4A373;
+    background-color: #fff;
+}
+
+/* Dynamic mobile stacking */
+@media (max-width: 480px) {
+    .error-actions-row {
+        flex-direction: column;
+        width: 100%;
+        max-width: 280px;
+    }
+    .btn-error-primary, .btn-error-secondary {
+        width: 100%;
+        text-align: center;
+    }
+}

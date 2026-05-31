@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>לוח בקרה | תורה האב</title>
+    <title>לוח בקרה | אורייתא</title>
     <link rel="stylesheet" href="../style.css">
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
+    <!-- The navigation bar-->
     <nav class="navbar">
         <div class="nav-right">
             <div class="logo"> אורייתא ✡</div>
@@ -80,9 +80,18 @@
                             <span>📍 ירושלים</span>
                         </div>
                     </div>
+                      <div class="item-actions">
+                        <a href="single_lesson.html" class="btn-small-dark">
+                            👥 ראה משתתפים
+                        </a>
+                        <br><br>
+                        <button class="btn-small-outline">בטל הרשמה</button>
+                      </div>
+                    
                     <div class="item-image-wrapper">
                         <img src="https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=150&auto=format&fit=crop" alt="Lesson Graphic">
                     </div>
+
                 </div>
 
                 <div class="panel-item">
@@ -95,6 +104,13 @@
                             <span>🕒 18:30</span>
                             <span>📍 תל אביב</span>
                         </div>
+                         <div class="item-actions">
+                        <a href="single_lesson.html" class="btn-small-dark">
+                            👥 ראה משתתפים
+                        </a>
+                        <br><br>
+                        <button class="btn-small-outline">בטל הרשמה</button>
+                      </div>
                     </div>
                     <div class="item-image-wrapper">
                         <img src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=150&auto=format&fit=crop" alt="Lesson Graphic">
@@ -105,33 +121,33 @@
         </section>
     </main>
 
+    <!-- The footer section -->
     <footer class="footer">
-        <div class="footer-top">
-            <div class="footer-col">
-                <div class="logo"> אורייתא</div>
-                <p>מחברים קהילות דרך לימוד תורה</p>
-            </div>
-            <div class="footer-col">
-                <h4>פלטפורמה</h4>
-                <a href="#">עיין בערים</a>
-                <a href="#">יצירת שיעור</a>
-                <a href="#">לוח בקרה</a>
-            </div>
-            <div class="footer-col">
-                <h4>משאבים</h4>
-                <a href="#">אודות</a>
-                <a href="#">כללי קהילה</a>
-                <a href="#">שאלות נפוצות</a>
-            </div>
-            <div class="footer-col">
-                <h4>התחברו</h4>
-                <div class="social-icons">f 📸 ✉️</div>
-            </div>
+    <div class="footer-top">
+        <div class="footer-col">
+            <div class="logo">אורייתא ✡</div>
+            <p>מחברים קהילות דרך לימוד תורה</p>
         </div>
-        <div class="footer-bottom">
-            © 2026  אורייתא. כל הזכויות שמורות.
+
+        <div class="footer-col">
+            <!--links for use resources-->
+            <h4>פלטפורמה</h4>
+            <a href="create_lesson.html">יצירת שיעור ⊕</a>
+            <a href="dashboard.html">לוח בקרה</a>
         </div>
-    </footer>
+
+        <div class="footer-col">
+            <!--links for useful resources-->
+            <h4>קישורים שימושיים</h4>
+            <a href="home_page.html">דף הבית</a>
+            <a href="all_lessons.html">כל השיעורים</a>
+        </div>
+    </div>
+    
+    <div class="footer-bottom">
+        © 2026 אורייתא. כל הזכויות שמורות.
+    </div>
+</footer>
 
 </body>
 </html>
