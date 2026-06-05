@@ -7,20 +7,6 @@ app.use(express.static(__dirname));
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'client', 'pages', 'home_page.html'));
 });
-
-
-/*
-const express = require('express');
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const path = require('path'); 
-require('dotenv').config();
-const app = express();
-/
-const app = require('./app'); // Import the configured app from app.js
-require('dotenv').config(); // Load environment variables from .env
-*/
-
 //listening on port 3000
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
