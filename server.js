@@ -1,4 +1,5 @@
 const express = require('express'); // Import Express framework
+require('./app');
 const path = require('path'); // Built-in Node.js module for handling file paths
 const app = express();
 // 1. Serve all your HTML and CSS files automatically from the project folder

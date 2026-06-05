@@ -1,26 +1,37 @@
-import mongoose from 'mongoose';
 const mongoose = require('mongoose');
-//create a schema (a template rulebook) for how i want the users to be stored in the database
+
+// Schema for application users
 const userSchema = new mongoose.Schema({
-    name: { 
-        type: String,     // Rule: The name MUST be text characters
-        required: true    // Rule: You cannot leave this blank!
+
+    // User full name
+    name: {
+        type: String,
+        required: true
     },
-    email: { 
-        type: String,     // Rule: Must be text characters
-        required: true,   // Rule: You cannot leave this blank!
-        unique: true      // Rule: Two users cannot sign up with the exact same email address!
+
+    // User email address
+    // Must be unique for every user
+    email: {
+        type: String,
+        required: true,
+        unique: true
     },
-    password: { 
-        type: String,     // Rule: Must be text characters
-        required: true    // Rule: You cannot leave this blank!
+
+    // User password
+    password: {
+        type: String,
+        required: true
     },
+
+    // Optional phone number
     phone: {
-        type: String,     // Rule: Must be text characters
-        required: true    // Rule: You cannot leave this blank!
+        type: String
     }
+
 });
 
-// 2. You build the active tool (Model) out of that template rulebook
+// Create a model based on the schema
+// This model will interact with the "users" collection
 module.exports = mongoose.model('User', userSchema);
+
 
