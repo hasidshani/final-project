@@ -26,12 +26,21 @@ const userSchema = new mongoose.Schema({
     // Optional phone number
     phone: {
         type: String
-    }
+    },
+
+    // Lessons marked as favorites by the user
+    favorites: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Lesson"
+    }]
+
+}, {
+
+    // Automatically creates createdAt and updatedAt
+    timestamps: true
 
 });
 
 // Create a model based on the schema
 // This model will interact with the "users" collection
 module.exports = mongoose.model('User', userSchema);
-
-

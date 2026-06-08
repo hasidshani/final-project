@@ -46,6 +46,12 @@ const lessonSchema = new mongoose.Schema({
         required: true
     },
 
+    // Lesson start time
+    time: {
+        type: String,
+        required: true
+    },
+
     // Lesson image path or URL
     image: {
         type: String,
@@ -65,11 +71,19 @@ const lessonSchema = new mongoose.Schema({
         ref: "User"
     }],
 
+    // Maximum number of participants allowed
+    maxParticipants: {
+        type: Number,
+        default: 50
+},
+
     // Average lesson rating
     rating: {
-        type: Number,
-        default: 0
-    }
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
+}
 
 }, {
     // Automatically creates createdAt and updatedAt
