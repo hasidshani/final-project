@@ -34,7 +34,6 @@ exports.registerUser = async (req, res) => {
             email: email,
             password: hashedPassword,
             phone: phone
-
         });
         // Save the user in MongoDB
         const savedUser = await newUser.save();
