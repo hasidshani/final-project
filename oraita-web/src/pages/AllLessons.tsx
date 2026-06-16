@@ -1,3 +1,37 @@
+import LessonCard from '../components/LessonCard';
+// Lessons data
+const lessons = [
+    {
+        title:"מעמיק בפרשת וירא",
+        teacher:"הרב דוד כהן",
+        category:"פרשת שבוע",
+        city:"פרדס חנה",
+        date:"12 במאי 2026",
+        time:"19:00",
+        rating:4.8,
+        image:"https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop"
+    },
+    {
+        title:"מבוא ללימוד התלמוד",
+        teacher:"הרבנית שרה לוי",
+        category:"גמרא",
+        city:"נתניה",
+        date:"13 במאי 2026",
+        time:"18:30",
+        rating:4.5,
+        image:"https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=400&auto=format&fit=crop"
+    },
+    {
+        title:"הלכות שבת למעשה",
+        teacher:"הרב אברהם מזרחי",
+        category:"הלכה",
+        city:"פרדס חנה",
+        date:"15 במאי 2026",
+        time:"20:00",
+        rating:4.9,
+        image:"https://images.unsplash.com/photo-1435527173128-983b87a01f4d?q=80&w=400&auto=format&fit=crop"
+    }
+];
 // All lessons page component
 function AllLessons() {
     return (
@@ -19,9 +53,7 @@ function AllLessons() {
 
             {/* Search header */}
             <header className="search-header">
-
                 <h1>כל השיעורים</h1>
-
                 <div className="search-bar-container">
                     <input
                         type="text"
@@ -32,9 +64,7 @@ function AllLessons() {
                         🔍 חפשו
                     </button>
                 </div>
-
                 <div className="filter-row">
-
                     <div className="category-buttons">
                         <button className="filter-btn active">הכל</button>
                         <button className="filter-btn">חסידות</button>
@@ -44,7 +74,6 @@ function AllLessons() {
                         <button className="filter-btn">גמרא</button>
                         <button className="filter-btn">פרשת שבוע</button>
                     </div>
-
                     <div className="city-dropdown-box">
                         <select className="city-select-dropdown">
                             <option value="">כל הערים</option>
@@ -52,104 +81,27 @@ function AllLessons() {
                             <option value="netanya">נתניה</option>
                         </select>
                     </div>
-
                 </div>
-
             </header>
-
             {/* Lessons grid */}
             <main className="lessons-search-container">
-
                 <div className="search-lessons-grid">
-
-                    {/* Lesson card 1 */}
-                    <div className="lesson-search-card">
-
-                        <div className="card-image-box">
-                            <img
-                                src="https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop"
-                                alt="Lesson"
-                            />
-                            <span className="card-tag">פרשת שבוע</span>
-                        </div>
-
-                        <div className="card-body-content">
-                            <div className="card-rating">⭐ 4.8</div>
-                            <h3>מעמיק בפרשת וירא</h3>
-                            <p className="teacher-name">הרב דוד כהן</p>
-
-                            <div className="card-meta-details">
-                                <span>📍 פרדס חנה</span>
-                                <span>📅 12 במאי 2026 | 🕒 19:00</span>
-                            </div>
-
-                            <a href="#" className="btn-details-action">
-                                לפרטים נוספים
-                            </a>
-                        </div>
-
-                    </div>
-
-                    {/* Lesson card 2 */}
-                    <div className="lesson-search-card">
-
-                        <div className="card-image-box">
-                            <img
-                                src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=400&auto=format&fit=crop"
-                                alt="Lesson"
-                            />
-                            <span className="card-tag">גמרא</span>
-                        </div>
-
-                        <div className="card-body-content">
-                            <div className="card-rating">⭐ 4.5</div>
-                            <h3>מבוא ללימוד התלמוד</h3>
-                            <p className="teacher-name">הרבנית שרה לוי</p>
-
-                            <div className="card-meta-details">
-                                <span>📍 נתניה</span>
-                                <span>📅 13 במאי 2026 | 🕒 18:30</span>
-                            </div>
-
-                            <a href="#" className="btn-details-action">
-                                לפרטים נוספים
-                            </a>
-                        </div>
-
-                    </div>
-
-                    {/* Lesson card 3 */}
-                    <div className="lesson-search-card">
-
-                        <div className="card-image-box">
-                            <img
-                                src="https://images.unsplash.com/photo-1435527173128-983b87a01f4d?q=80&w=400&auto=format&fit=crop"
-                                alt="Lesson"
-                            />
-                            <span className="card-tag">הלכה</span>
-                        </div>
-
-                        <div className="card-body-content">
-                            <div className="card-rating">⭐ 4.9</div>
-                            <h3>הלכות שבת למעשה</h3>
-                            <p className="teacher-name">הרב אברהם מזרחי</p>
-
-                            <div className="card-meta-details">
-                                <span>📍 פרדס חנה</span>
-                                <span>📅 15 במאי 2026 | 🕒 20:00</span>
-                            </div>
-
-                            <a href="#" className="btn-details-action">
-                                לפרטים נוספים
-                            </a>
-                        </div>
-
-                    </div>
-
+                    {/* Map through lessons data and render a LessonCard for each lesson */}
+                    {lessons.map((lesson) => (
+                    <LessonCard
+                        key={lesson.title}
+                        title={lesson.title}
+                        teacher={lesson.teacher}
+                        category={lesson.category}
+                        city={lesson.city}
+                        date={lesson.date}
+                        time={lesson.time}
+                        rating={lesson.rating}
+                        image={lesson.image}
+                    />
+                    ))}
                 </div>
-
             </main>
-
             {/* Footer */}
             <footer className="footer">
 
