@@ -1,0 +1,63 @@
+import mongoose, { Document, Schema } from 'mongoose';
+
+// User document interface
+export interface IUser extends Document {
+    // User full name
+    name: string;
+    // User email address
+    email: string;
+    // User password
+    password: string;
+    // Optional phone number
+    phone?: string;
+    // Favorite lessons
+    favorites: mongoose.Types.ObjectId[];
+    // Active refresh tokens
+    refreshTokens: string[];
+
+}
+
+// User schema
+const userSchema = new Schema<IUser>({
+    // User full name
+    name: {
+        type: String,
+        required: true
+    },
+    // User email address
+    email: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    // User password
+    password: {
+        type: String,
+        required: true
+    },
+    // Optional phone number
+    phone: {
+        type: String
+    },
+    // Lessons marked as favorites by the user
+    favorites: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Lesson'
+    }],
+     // Active refresh tokens
+    refreshTokens: [{
+        type: String
+    }]
+
+}, {
+    // Automatically creates createdAt and updatedAt
+    timestamps: true
+});
+
+// User model
+const User = mongoose.model<IUser>(
+    'User',
+    userSchema
+);
+
+export default User;
