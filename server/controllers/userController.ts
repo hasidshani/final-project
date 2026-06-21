@@ -6,6 +6,7 @@ import {
 import User from '../models/users';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+
 // JWT payload type
 type TokenPayload = {
     userId: string;
@@ -440,68 +441,121 @@ export const refresh = async (
 };
 
 
-// Authentication middleware
-export const authMiddleware = (
+// Add lesson to favorites
+export const addFavorite = async (
     req: Request,
-    res: Response,
-    next: NextFunction
+    res: Response
 ) => {
 
-    // Get authorization header
-    const authHeader =
-        req.headers['authorization'];
+    const userId =
+        req.query.userId as string;
 
-    // Extract token from:
-    // Authorization: Bearer <token>
-    const token =
-        authHeader &&
-        authHeader.split(' ')[1];
+    const lessonId =
+        req.params.lessonId;
 
-    // Check if token exists
-    if (!token) {
-        return res.status(401).json({
-            success: false,
-            message: 'Missing token'
+    try {
+
+        const user =
+            await User.findById(
+                userId
+            );
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Prevent duplicates
+        if (
+            user.favorites.includes(
+                lessonId as any
+            )
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    'Lesson already in favorites'
+            });
+        }
+
+        user.favorites.push(
+            lessonId as any
+        );
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message:
+                'Lesson added to favorites'
         });
-    }
 
-    // Check configuration
-    if (!process.env.TOKEN_SECRET) {
+    } catch (error) {
+
         return res.status(400).json({
             success: false,
-            message: 'Missing auth configuration'
+            message:
+                error instanceof Error
+                    ? error.message
+                    : 'Unknown error'
         });
     }
-
-    // Verify JWT token
-    jwt.verify(
-        token,
-        process.env.TOKEN_SECRET,
-        (
-            err,
-            data
-        ) => {
-
-            // Invalid token
-            if (err) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Invalid token'
-                });
-            }
-
-            // Extract payload
-            const payload =
-                data as TokenPayload;
-
-            // Save user id for next middleware/controller
-            req.query.userId =
-                payload.userId;
-
-            // Continue request
-            next();
-        }
-    );
 };
+
+// Remove lesson from favorites
+export const removeFavorite = async (
+    req: Request,
+    res: Response
+) => {
+
+    const userId =
+        req.query.userId as string;
+
+    const lessonId =
+        req.params.lessonId;
+
+    try {
+
+        const user =
+            await User.findById(
+                userId
+            );
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        user.favorites =
+            user.favorites.filter(
+                (favorite) =>
+                    favorite.toString() !==
+                    lessonId
+            );
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message:
+                'Lesson removed from favorites'
+        });
+
+    } catch (error) {
+
+        return res.status(400).json({
+            success: false,
+            message:
+                error instanceof Error
+                    ? error.message
+                    : 'Unknown error'
+        });
+    }
+};
+
 
 

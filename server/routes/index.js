@@ -23,7 +23,7 @@ router.get('/dashboard', (req, res) => {
 });
 
 // All Lessons Page
-router.get('/all-lessons', (req, res) => {
+router.get('/all-lessons', (req, res) => {S
     res.sendFile(path.join(__dirname, '../client/pages/all_lessons.html'));
 });
 
