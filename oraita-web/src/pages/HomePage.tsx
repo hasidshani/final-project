@@ -1,32 +1,12 @@
+// Navbar component
+import Navbar from "../components/Navbar";
+
 // Home page component
 function Home() {
     return (
         <>
             {/* Navigation bar */}
-            <nav className="navbar">
-                <div className="nav-right">
-                    <ul className="nav-links">
-                        <li><a href="#" className="active">דף הבית</a></li>
-                        <li><a href="#">לוח בקרה</a></li>
-                    </ul>
-                </div>
-                <div className="nav-left">
-                    <a
-                        href="#"
-                        className="btn-outline"
-                        style={{textDecoration:'none',display:'inline-block'}}
-                    >
-                        יצירת שיעור ⊕
-                    </a>
-                    <a
-                        href="#"
-                        className="user-link"
-                        style={{textDecoration:'none'}}
-                    >
-                        התחברות 👤
-                    </a>
-                </div>
-            </nav>
+            <Navbar />
 
             {/* Hero section */}
             <header className="hero">

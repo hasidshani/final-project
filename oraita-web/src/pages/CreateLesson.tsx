@@ -1,23 +1,12 @@
-// Create lesson page component
+// Navbar component
+import Navbar from "../components/Navbar";// Create lesson page component
 function CreateLesson() {
     return (
         <>
             {/* Navigation bar */}
-            <nav className="navbar">
-                <div className="nav-right">
-                    <div className="logo">אורייתא ✡</div>
-                    <ul className="nav-links">
-                        <li><a href="#">דף הבית</a></li>
-                        <li><a href="#">כל השיעורים</a></li>
-                        <li><a href="#">לוח בקרה</a></li>
-                    </ul>
-                </div>
-
-                {/* Authentication area */}
-                <div className="nav-left" id="auth-status">
-                </div>
-            </nav>
-
+             <Navbar />
+            {/* Search header */}
+            <header className="search-header"></header>
             {/* Create lesson form */}
             <main className="form-page-container">
 

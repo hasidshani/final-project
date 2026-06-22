@@ -1,22 +1,11 @@
+// Navbar component
+import Navbar from "../components/Navbar";
 // Dashboard page component
 function Dashboard() {
     return (
         <>
             {/* Navigation bar */}
-            <nav className="navbar">
-                <div className="nav-right">
-                    <div className="logo">אורייתא ✡</div>
-                    <ul className="nav-links">
-                        <li><a href="#">דף הבית</a></li>
-                        <li><a href="#" className="active">לוח בקרה</a></li>
-                    </ul>
-                </div>
-                <div className="nav-left">
-                    <button className="btn-outline">יצירת שיעור ⊕</button>
-                    <span className="user-link">התחברות 👤</span>
-                </div>
-            </nav>
-
+            <Navbar />
             {/* Dashboard content */}
             <main className="dashboard-container">
 
@@ -25,10 +14,6 @@ function Dashboard() {
                     <div className="dash-title">
                         <h1>לוח בקרה</h1>
                         <p className="welcome-msg">שלום, דוד</p>
-                    </div>
-                    <div className="dash-actions">
-                        <button className="btn-dark">יצירת שיעור ⊕</button>
-                        <button className="btn-light-outline">⚙️ הגדרות</button>
                     </div>
                 </header>
 

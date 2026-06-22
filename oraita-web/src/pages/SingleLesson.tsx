@@ -1,23 +1,16 @@
+// Navbar component
+import Navbar from "../components/Navbar";
+// Single lesson page component
+import { useParams } from 'react-router-dom';
 // Single lesson page component
 function SingleLesson() {
+    const { id } = useParams();  
+    console.log("Lesson ID:", id); // Log the lesson ID to the console       
     return (
         <>
             {/* Navigation bar */}
-            <nav className="navbar">
-                <div className="nav-right">
-                    <div className="logo">אורייתא ✡</div>
-                    <ul className="nav-links">
-                        <li><a href="#">דף הבית</a></li>
-                        <li><a href="#">כל השיעורים</a></li>
-                        <li><a href="#">לוח בקרה</a></li>
-                    </ul>
-                </div>
-                <div className="nav-left">
-                    <button className="btn-outline">יצירת שיעור ⊕</button>
-                    <span className="user-link">התחברות 👤</span>
-                </div>
-            </nav>
-
+            <Navbar />
+            
             {/* Lesson banner */}
             <div className="lesson-banner">
                 <img

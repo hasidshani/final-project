@@ -41,25 +41,25 @@ function App() {
 
                 {/* All lessons page */}
                 <Route
-                    path="/all-lessons"
+                    path="/alllessons"
                     element={<AllLessons />}
                 />
 
                 {/* Create lesson page */}
                 <Route
-                    path="/create-lesson"
+                    path="/createlesson"
                     element={<CreateLesson />}
                 />
 
                 {/* Single lesson page */}
                 <Route
-                    path="/lesson"
+                    path="/lesson/:id"
                     element={<SingleLesson />}
                 />
 
                 {/* Teacher profile page */}
                 <Route
-                    path="/teacher-profile"
+                    path="/teacherprofile"
                     element={<TeacherProfile />}
                 />
 

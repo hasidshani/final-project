@@ -1,7 +1,11 @@
 import LessonCard from '../components/LessonCard';
+// Navbar component
+import Navbar from "../components/Navbar";
+
 // Lessons data
 const lessons = [
     {
+        id: 1,
         title:"מעמיק בפרשת וירא",
         teacher:"הרב דוד כהן",
         category:"פרשת שבוע",
@@ -12,6 +16,7 @@ const lessons = [
         image:"https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop"
     },
     {
+        id: 2,
         title:"מבוא ללימוד התלמוד",
         teacher:"הרבנית שרה לוי",
         category:"גמרא",
@@ -22,6 +27,7 @@ const lessons = [
         image:"https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=400&auto=format&fit=crop"
     },
     {
+        id: 3,
         title:"הלכות שבת למעשה",
         teacher:"הרב אברהם מזרחי",
         category:"הלכה",
@@ -36,20 +42,7 @@ const lessons = [
 function AllLessons() {
     return (
         <>
-            {/* Navigation bar */}
-            <nav className="navbar">
-                <div className="nav-right">
-                    <div className="logo">אורייתא ✡</div>
-                    <ul className="nav-links">
-                        <li><a href="#">דף הבית</a></li>
-                        <li><a href="#">לוח בקרה</a></li>
-                    </ul>
-                </div>
-                <div className="nav-left">
-                    <button className="btn-outline">יצירת שיעור ⊕</button>
-                    <span className="user-link">התחברות 👤</span>
-                </div>
-            </nav>
+          <Navbar />
 
             {/* Search header */}
             <header className="search-header">
@@ -89,7 +82,8 @@ function AllLessons() {
                     {/* Map through lessons data and render a LessonCard for each lesson */}
                     {lessons.map((lesson) => (
                     <LessonCard
-                        key={lesson.title}
+                        key={lesson.id}
+                        id={lesson.id}
                         title={lesson.title}
                         teacher={lesson.teacher}
                         category={lesson.category}

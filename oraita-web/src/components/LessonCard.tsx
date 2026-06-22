@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom';
 // Lesson card props
 type LessonCardProps = {
+     id:number;
     title:string;
     teacher:string;
     category:string;
@@ -12,6 +14,7 @@ type LessonCardProps = {
 
 // Lesson card component
 function LessonCard({
+    id,
     title,
     teacher,
     category,
@@ -55,12 +58,12 @@ function LessonCard({
                         📅 {date} | 🕒 {time}
                     </span>
                 </div>
-                <a
-                    href="#"
+                <Link
+                    to={`/lesson/${id}`}
                     className="btn-details-action"
                 >
                     לפרטים נוספים
-                </a>
+                </Link>
             </div>
 
         </div>

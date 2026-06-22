@@ -1,32 +1,11 @@
+// Navbar component
+import Navbar from "../components/Navbar";
 // Teacher profile page component
 function TeacherProfile() {
     return (
         <>
             {/* Navigation bar */}
-            <nav className="navbar">
-                <div className="nav-right">
-                    <div className="logo">אורייתא ✡</div>
-                    <ul className="nav-links">
-                        <li><a href="#">דף הבית</a></li>
-                        <li><a href="#">כל השיעורים</a></li>
-                        <li><a href="#">לוח בקרה</a></li>
-                    </ul>
-                </div>
-                <div className="nav-left">
-                    <a
-                        href="#"
-                        className="btn-outline"
-                    >
-                        יצירת שיעור ⊕
-                    </a>
-                    <a
-                        href="#"
-                        className="user-link"
-                    >
-                        התחברות 👤
-                    </a>
-                </div>
-            </nav>
+            <Navbar />
 
             {/* Cover banner */}
             <div className="profile-cover-banner"></div>
