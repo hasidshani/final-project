@@ -11,7 +11,7 @@ export const createComment = async (
         req.params.lessonId;
 
     const userId =
-        req.query.userId as string;
+        req.userId as string;
 
     const { text } = req.body;
 
@@ -108,7 +108,7 @@ export const deleteComment = async (
         req.params.id;
 
     const userId =
-        req.query.userId as string;
+        req.userId as string;
 
     try {
 

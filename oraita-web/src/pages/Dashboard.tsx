@@ -1,11 +1,10 @@
-// Navbar component
-import Navbar from "../components/Navbar";
+import Layout from '../components/Layout';
+
 // Dashboard page component
 function Dashboard() {
     return (
-        <>
-            {/* Navigation bar */}
-            <Navbar />
+        
+       <Layout>
             {/* Dashboard content */}
             <main className="dashboard-container">
 
@@ -161,37 +160,9 @@ function Dashboard() {
                 </section>
 
             </main>
+         </Layout>
 
-            {/* Footer */}
-            <footer className="footer">
-
-                <div className="footer-top">
-
-                    <div className="footer-col">
-                        <div className="logo">אורייתא ✡</div>
-                        <p>מחברים קהילות דרך לימוד תורה</p>
-                    </div>
-
-                    <div className="footer-col">
-                        <h4>פלטפורמה</h4>
-                        <a href="#">יצירת שיעור ⊕</a>
-                        <a href="#">לוח בקרה</a>
-                    </div>
-
-                    <div className="footer-col">
-                        <h4>קישורים שימושיים</h4>
-                        <a href="#">דף הבית</a>
-                        <a href="#">כל השיעורים</a>
-                    </div>
-
-                </div>
-
-                <div className="footer-bottom">
-                    © 2026 אורייתא. כל הזכויות שמורות.
-                </div>
-
-            </footer>
-        </>
+      
     );
 }
 export default Dashboard;

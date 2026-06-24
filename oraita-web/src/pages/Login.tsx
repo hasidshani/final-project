@@ -1,76 +1,42 @@
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
-import React, { useState } from 'react';
 function Login() {
-    const [email, setEmail] =
-    useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const [password, setPassword] =
-        useState('');
-    const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-) => {
+    const { login } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
 
-    e.preventDefault();
+    // If the user was redirected here from a protected page, go back there after login
+    const from = (location.state as any)?.from?.pathname || '/dashboard';
 
-    try {
+    const handleSubmit = async (e: { preventDefault(): void }) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
 
-        const response = await fetch(
-            'http://localhost:3000/api/users/login',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type':
-                        'application/json'
-                },
-                body: JSON.stringify({
-                    email,
-                    password
-                })
-            }
-        );
+        try {
+            const { data } = await api.post('/users/login', { email, password });
 
-        const data =
-            await response.json();
+            // Save tokens + user into AuthContext (also stores in localStorage)
+            login(data.user, data.accessToken, data.refreshToken);
 
-        console.log(data);
+            // Navigate to dashboard (or the page they were trying to reach)
+            navigate(from, { replace: true });
 
-        if (response.ok) {
-
-            localStorage.setItem(
-                'accessToken',
-                data.accessToken
-            );
-
-            localStorage.setItem(
-                'refreshToken',
-                data.refreshToken
-            );
-            // Show success message
-            alert(
-                'Login successful'
-            );
-            // Redirect to dashboard
-            window.location.href =
-            '/dashboard';
-
-        } else {
-
-            alert(
-                data.message
-            );
-
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'שגיאה בשרת, נסו שוב');
+        } finally {
+            setLoading(false);
         }
+    };
 
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            'Server error'
-        );
-
-    }
-};    
     return (
         <div className="auth-bg">
             <div className="login-container">
@@ -80,7 +46,15 @@ function Login() {
                     <h2>ברוכים השבים</h2>
                     <p>היכנסו כדי להמשיך את מסע הלמידה שלכם</p>
                 </div>
+
                 <div className="login-card">
+                    {/* Inline error message instead of alert() */}
+                    {error && (
+                        <div className="error-message">
+                            {error}
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit}>
                         <div className="input-group">
                             <label>כתובת אימייל</label>
@@ -89,53 +63,46 @@ function Login() {
                                     type="email"
                                     placeholder="you@example.com"
                                     value={email}
-                                    onChange={(e) =>
-                                        setEmail(
-                                            e.target.value
-                                        )
-                                    }
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
                                 />
-                                <span className="input-icon">
-                                    ✉️
-                                </span>
+                                <span className="input-icon">✉️</span>
                             </div>
                         </div>
+
                         <div className="input-group">
                             <label>סיסמה</label>
                             <div className="input-wrapper">
-                               <input
+                                <input
                                     type="password"
                                     placeholder="........"
                                     value={password}
-                                    onChange={(e) =>
-                                        setPassword(
-                                            e.target.value
-                                        )
-                                    }
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
                                 />
-                                <span className="input-icon">
-                                    🔒
-                                </span>
+                                <span className="input-icon">🔒</span>
                             </div>
                         </div>
+
                         <button
                             type="submit"
                             className="btn-login"
+                            disabled={loading}
                         >
-                            התחברו
+                            {loading ? 'מתחבר...' : 'התחברו'}
                         </button>
                     </form>
                 </div>
+
                 <div className="login-footer">
                     <span>
-                        אין לכם חשבון?
-                        <a href="/register">
-                            הירשמו
-                        </a>
+                        אין לכם חשבון?{' '}
+                        <a href="/register">הירשמו</a>
                     </span>
                 </div>
             </div>
         </div>
     );
 }
+
 export default Login;

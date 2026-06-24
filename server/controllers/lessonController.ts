@@ -18,7 +18,7 @@ export const createLesson = async (
     } = req.body;
 
     const userId =
-        req.query.userId as string;
+        req.userId as string;
 
     // Basic validation
     if (
@@ -179,7 +179,7 @@ export const joinLesson = async (
         req.params.id;
 
     const userId =
-        req.query.userId as string;
+        req.userId as string;
 
     try {
 
@@ -261,7 +261,7 @@ export const deleteLesson = async (
         req.params.id;
 
     const userId =
-        req.query.userId as string;
+        req.userId as string;
 
     try {
 

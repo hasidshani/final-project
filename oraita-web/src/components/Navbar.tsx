@@ -45,7 +45,7 @@ function Navbar() {
             <div className="nav-left">
 
                 <Link
-                    to="/create-lesson"
+                    to="/createlesson"
                     className="btn-outline"
                     style={{
                         textDecoration: 'none',

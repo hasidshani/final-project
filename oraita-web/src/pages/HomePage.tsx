@@ -1,12 +1,10 @@
-// Navbar component
-import Navbar from "../components/Navbar";
-
+import Layout from '../components/Layout';
+import { Link } from 'react-router-dom';
 // Home page component
 function Home() {
     return (
-        <>
-            {/* Navigation bar */}
-            <Navbar />
+
+        <Layout> 
 
             {/* Hero section */}
             <header className="hero">
@@ -91,52 +89,25 @@ function Home() {
 
             {/* Call to action section */}
             <section className="cta-box">
-                <div className="cta-content">
-                    <h2>הצטרפו לקהילת התורה</h2>
-                    <p>
-                        התחילו את מסע הלמידה שלכם היום. צרו חשבון כדי להצטרף לשיעורים, להתחבר למורים ולצמוח רוחנית.
-                    </p>
-                    <div className="cta-btns">
-                        <a href="#" className="btn-dark">
-                            התחילו עכשיו ←
-                        </a>
-                        <a href="#" className="btn-light-outline">
-                            עיינו בשיעורים
-                        </a>
-                    </div>
-                </div>
+            <div className="cta-btns">
+                <Link
+                    to="/login"
+                    className="btn-dark"
+                    style={{ textDecoration: 'none' }}
+                >
+                    התחברות →
+                </Link>
+
+                <Link
+                    to="/alllessons"
+                    className="btn-light-outline"
+                    style={{ textDecoration: 'none' }}
+                >
+                    עיינו בשיעורים
+                </Link>
+            </div>
             </section>
-
-            {/* Footer */}
-            <footer className="footer">
-
-                <div className="footer-top">
-
-                    <div className="footer-col">
-                        <div className="logo">אורייתא ✡</div>
-                        <p>מחברים קהילות דרך לימוד תורה</p>
-                    </div>
-
-                    <div className="footer-col">
-                        <h4>פלטפורמה</h4>
-                        <a href="#">יצירת שיעור ⊕</a>
-                        <a href="#">לוח בקרה</a>
-                    </div>
-
-                    <div className="footer-col">
-                        <h4>קישורים שימושיים</h4>
-                        <a href="#">דף הבית</a>
-                        <a href="#">כל השיעורים</a>
-                    </div>
-
-                </div>
-
-                <div className="footer-bottom">
-                    © 2026 אורייתא. כל הזכויות שמורות.
-                </div>
-
-            </footer>
-        </>
+            </Layout>
     );
 }
 export default Home;

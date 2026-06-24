@@ -1,75 +1,45 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import PrivateRoute from './components/PrivateRoute';
 
-import Home from './pages/HomePage';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import CreateLesson from './pages/CreateLesson';
-import AllLessons from './pages/AllLessons';
-import SingleLesson from './pages/SingleLesson';
-import TeacherProfile from './pages/TeacherProfile';
-import NotFound from './pages/NotFound';
+// Lazy-loaded pages — each page loads only when navigated to
+const Home          = lazy(() => import('./pages/HomePage'));
+const Login         = lazy(() => import('./pages/Login'));
+const Register      = lazy(() => import('./pages/Register'));
+const Dashboard     = lazy(() => import('./pages/Dashboard'));
+const CreateLesson  = lazy(() => import('./pages/CreateLesson'));
+const AllLessons    = lazy(() => import('./pages/AllLessons'));
+const SingleLesson  = lazy(() => import('./pages/SingleLesson'));
+const TeacherProfile = lazy(() => import('./pages/TeacherProfile'));
+const NotFound      = lazy(() => import('./pages/NotFound'));
 
 function App() {
     return (
         <BrowserRouter>
-            <Routes>
+            <Suspense fallback={<div className="text-center p-5">טוען...</div>}>
+                <Routes>
 
-                {/* Home page */}
-                <Route
-                    path="/"
-                    element={<Home />}
-                />
+                    {/* Public routes */}
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/alllessons" element={<AllLessons />} />
+                    <Route path="/lesson/:id" element={<SingleLesson />} />
+                    <Route path="/teacherprofile/:id" element={<TeacherProfile />} />
 
-                {/* Login page */}
-                <Route
-                    path="/login"
-                    element={<Login />}
-                />
+                    {/* Protected routes — require login */}
+                    <Route path="/dashboard" element={
+                        <PrivateRoute><Dashboard /></PrivateRoute>
+                    } />
+                    <Route path="/createlesson" element={
+                        <PrivateRoute><CreateLesson /></PrivateRoute>
+                    } />
 
-                {/* Register page */}
-                <Route
-                    path="/register"
-                    element={<Register />}
-                />
+                    {/* 404 */}
+                    <Route path="*" element={<NotFound />} />
 
-                {/* Dashboard page */}
-                <Route
-                    path="/dashboard"
-                    element={<Dashboard />}
-                />
-
-                {/* All lessons page */}
-                <Route
-                    path="/alllessons"
-                    element={<AllLessons />}
-                />
-
-                {/* Create lesson page */}
-                <Route
-                    path="/createlesson"
-                    element={<CreateLesson />}
-                />
-
-                {/* Single lesson page */}
-                <Route
-                    path="/lesson/:id"
-                    element={<SingleLesson />}
-                />
-
-                {/* Teacher profile page */}
-                <Route
-                    path="/teacherprofile"
-                    element={<TeacherProfile />}
-                />
-
-                {/* 404 page */}
-                <Route
-                    path="*"
-                    element={<NotFound />}
-                />
-
-            </Routes>
+                </Routes>
+            </Suspense>
         </BrowserRouter>
     );
 }

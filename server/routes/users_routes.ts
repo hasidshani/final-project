@@ -5,56 +5,37 @@ import {
     loginUser,
     logout,
     refresh,
+    getMe,
     addFavorite,
     removeFavorite
 } from '../controllers/userController';
 
-import {
-    authMiddleware
-} from '../middleware/authMiddleware';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { authLimiter } from '../middleware/rateLimiter';
+import validate from '../middleware/validate';
+import { registerSchema, loginSchema } from '../validation/userValidation';
+
 const router = express.Router();
 
+// Get current logged-in user
+router.get('/me', authMiddleware, getMe);
+
 // Register user
-router.post(
-    '/register',
-    registerUser
-);
+router.post('/register', authLimiter, validate(registerSchema), registerUser);
 
 // Login user
-router.post(
-    '/login',
-    loginUser
-);
+router.post('/login', authLimiter, validate(loginSchema), loginUser);
 
 // Logout user
-router.post(
-    '/logout',
-    logout
-);
+router.post('/logout', logout);
 
 // Refresh token
-router.post(
-    '/refresh',
-    refresh
-);
+router.post('/refresh', refresh);
 
 // Add lesson to favorites
-router.post(
-    '/favorites/:lessonId',
-    authMiddleware,
-    addFavorite
-);
+router.post('/favorites/:lessonId', authMiddleware, addFavorite);
 
 // Remove lesson from favorites
-router.delete(
-    '/favorites/:lessonId',
-    authMiddleware,
-    removeFavorite
-);
+router.delete('/favorites/:lessonId', authMiddleware, removeFavorite);
 
 export default router;
-
-
-
-
-

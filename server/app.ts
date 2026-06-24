@@ -1,40 +1,41 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 
 import usersRoutes from './routes/users_routes';
 import lessonsRoutes from './routes/lessons_routes';
 import commentsRoutes from './routes/comments_routes';
 
+import logger from './middleware/logger';
+import globalErrorHandler from './middleware/errorHandler';
+import { apiLimiter } from './middleware/rateLimiter';
+
 const app = express();
 
-app.use(cors());
+// Security headers
+app.use(helmet());
 
-// Parse JSON requests
-app.use(
-    express.json()
-);
+// CORS
+app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true
+}));
 
-// Parse JSON requests
-app.use(
-    express.json()
-);
+// Parse JSON
+app.use(express.json());
 
-// User routes
-app.use(
-    '/api/users',
-    usersRoutes
-);
+// Request logger
+app.use(logger);
 
-// Lesson routes
-app.use(
-    '/api/lessons',
-    lessonsRoutes
-);
+// Rate limit all API routes
+app.use('/api', apiLimiter);
 
-// Comment routes
-app.use(
-    '/api/comments',
-    commentsRoutes
-);
+// Routes
+app.use('/api/users', usersRoutes);
+app.use('/api/lessons', lessonsRoutes);
+app.use('/api/comments', commentsRoutes);
+
+// Global error handler — must be last
+app.use(globalErrorHandler);
 
 export default app;

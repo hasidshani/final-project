@@ -56,7 +56,7 @@ export const authMiddleware = (
             const payload =
                 data as TokenPayload;
 
-            req.query.userId =
+            req.userId =
                 payload.userId;
 
             next();

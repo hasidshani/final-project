@@ -441,6 +441,23 @@ export const refresh = async (
 };
 
 
+// Get currently logged-in user (for session restore on page refresh)
+export const getMe = async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId as string;
+        const user = await User.findById(userId).select('-password -refreshTokens');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        return res.status(200).json({ success: true, user });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
 // Add lesson to favorites
 export const addFavorite = async (
     req: Request,
@@ -448,7 +465,7 @@ export const addFavorite = async (
 ) => {
 
     const userId =
-        req.query.userId as string;
+        req.userId as string;
 
     const lessonId =
         req.params.lessonId;
@@ -511,7 +528,7 @@ export const removeFavorite = async (
 ) => {
 
     const userId =
-        req.query.userId as string;
+        req.userId as string;
 
     const lessonId =
         req.params.lessonId;

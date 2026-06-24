@@ -1,131 +1,114 @@
+import { useEffect, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../store/store';
+import { fetchLessons, setCategoryFilter, setCityFilter } from '../store/lessonsSlice';
 import LessonCard from '../components/LessonCard';
-// Navbar component
-import Navbar from "../components/Navbar";
+import Layout from '../components/Layout';
 
-// Lessons data
-const lessons = [
-    {
-        id: 1,
-        title:"מעמיק בפרשת וירא",
-        teacher:"הרב דוד כהן",
-        category:"פרשת שבוע",
-        city:"פרדס חנה",
-        date:"12 במאי 2026",
-        time:"19:00",
-        rating:4.8,
-        image:"https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop"
-    },
-    {
-        id: 2,
-        title:"מבוא ללימוד התלמוד",
-        teacher:"הרבנית שרה לוי",
-        category:"גמרא",
-        city:"נתניה",
-        date:"13 במאי 2026",
-        time:"18:30",
-        rating:4.5,
-        image:"https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=400&auto=format&fit=crop"
-    },
-    {
-        id: 3,
-        title:"הלכות שבת למעשה",
-        teacher:"הרב אברהם מזרחי",
-        category:"הלכה",
-        city:"פרדס חנה",
-        date:"15 במאי 2026",
-        time:"20:00",
-        rating:4.9,
-        image:"https://images.unsplash.com/photo-1435527173128-983b87a01f4d?q=80&w=400&auto=format&fit=crop"
-    }
-];
-// All lessons page component
+const CATEGORIES = ['חסידות', 'מוסר', 'הלכה', 'משנה', 'גמרא', 'פרשת שבוע'];
+
 function AllLessons() {
-    return (
-        <>
-          <Navbar />
+    const dispatch = useDispatch<AppDispatch>();
+    const { list, loading, error, categoryFilter, cityFilter } = useSelector(
+        (state: RootState) => state.lessons
+    );
 
-            {/* Search header */}
+    // Fetch all lessons from the API on first render
+    useEffect(() => {
+        dispatch(fetchLessons());
+    }, [dispatch]);
+
+    // Client-side filtering — only recomputes when list or filters change
+    const filtered = useMemo(() => {
+        return list.filter((lesson) => {
+            const matchesCategory = !categoryFilter || lesson.category === categoryFilter;
+            const matchesCity = !cityFilter || lesson.city === cityFilter;
+            return matchesCategory && matchesCity;
+        });
+    }, [list, categoryFilter, cityFilter]);
+
+    return (
+        <Layout>
+
+            {/* Search / filter header */}
             <header className="search-header">
                 <h1>כל השיעורים</h1>
-                <div className="search-bar-container">
-                    <input
-                        type="text"
-                        className="search-input"
-                        placeholder="חפשו שיעור, נושא או שם של מורה..."
-                    />
-                    <button className="btn-search">
-                        🔍 חפשו
-                    </button>
-                </div>
+
                 <div className="filter-row">
+                    {/* Category filter buttons */}
                     <div className="category-buttons">
-                        <button className="filter-btn active">הכל</button>
-                        <button className="filter-btn">חסידות</button>
-                        <button className="filter-btn">מוסר</button>
-                        <button className="filter-btn">הלכה</button>
-                        <button className="filter-btn">משנה</button>
-                        <button className="filter-btn">גמרא</button>
-                        <button className="filter-btn">פרשת שבוע</button>
+                        <button
+                            className={`filter-btn ${!categoryFilter ? 'active' : ''}`}
+                            onClick={() => dispatch(setCategoryFilter(''))}
+                        >
+                            הכל
+                        </button>
+                        {CATEGORIES.map((cat) => (
+                            <button
+                                key={cat}
+                                className={`filter-btn ${categoryFilter === cat ? 'active' : ''}`}
+                                onClick={() => dispatch(setCategoryFilter(cat))}
+                            >
+                                {cat}
+                            </button>
+                        ))}
                     </div>
+
+                    {/* City filter dropdown */}
                     <div className="city-dropdown-box">
-                        <select className="city-select-dropdown">
+                        <select
+                            className="city-select-dropdown"
+                            value={cityFilter}
+                            onChange={(e) => dispatch(setCityFilter(e.target.value))}
+                        >
                             <option value="">כל הערים</option>
-                            <option value="pardes-hana">פרדס חנה</option>
-                            <option value="netanya">נתניה</option>
+                            <option value="פרדס חנה">פרדס חנה</option>
+                            <option value="נתניה">נתניה</option>
                         </select>
                     </div>
                 </div>
             </header>
+
             {/* Lessons grid */}
             <main className="lessons-search-container">
-                <div className="search-lessons-grid">
-                    {/* Map through lessons data and render a LessonCard for each lesson */}
-                    {lessons.map((lesson) => (
-                    <LessonCard
-                        key={lesson.id}
-                        id={lesson.id}
-                        title={lesson.title}
-                        teacher={lesson.teacher}
-                        category={lesson.category}
-                        city={lesson.city}
-                        date={lesson.date}
-                        time={lesson.time}
-                        rating={lesson.rating}
-                        image={lesson.image}
-                    />
-                    ))}
-                </div>
+
+                {loading && (
+                    <div className="text-center p-5">טוען שיעורים...</div>
+                )}
+
+                {error && (
+                    <div className="text-center p-5" style={{ color: 'red' }}>
+                        שגיאה בטעינת השיעורים: {error}
+                    </div>
+                )}
+
+                {!loading && !error && filtered.length === 0 && (
+                    <div className="text-center p-5">
+                        לא נמצאו שיעורים בקטגוריה זו
+                    </div>
+                )}
+
+                {!loading && !error && filtered.length > 0 && (
+                    <div className="search-lessons-grid">
+                        {filtered.map((lesson) => (
+                            <LessonCard
+                                key={lesson._id}
+                                id={lesson._id}
+                                title={lesson.title}
+                                teacher={lesson.creator?.name || 'מורה'}
+                                category={lesson.category}
+                                city={lesson.city}
+                                date={lesson.date}
+                                time={lesson.time}
+                                rating={lesson.rating}
+                                image={lesson.image}
+                            />
+                        ))}
+                    </div>
+                )}
+
             </main>
-            {/* Footer */}
-            <footer className="footer">
-
-                <div className="footer-top">
-
-                    <div className="footer-col">
-                        <div className="logo">אורייתא ✡</div>
-                        <p>מחברים קהילות דרך לימוד תורה</p>
-                    </div>
-
-                    <div className="footer-col">
-                        <h4>פלטפורמה</h4>
-                        <a href="#">יצירת שיעור ⊕</a>
-                        <a href="#">לוח בקרה</a>
-                    </div>
-
-                    <div className="footer-col">
-                        <h4>קישורים שימושיים</h4>
-                        <a href="#">דף הבית</a>
-                        <a href="#">כל השיעורים</a>
-                    </div>
-
-                </div>
-
-                <div className="footer-bottom">
-                    © 2026 אורייתא. כל הזכויות שמורות.
-                </div>
-
-            </footer>
-        </>
+        </Layout>
     );
 }
 
