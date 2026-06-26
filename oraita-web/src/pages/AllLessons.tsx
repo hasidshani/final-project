@@ -1,112 +1,75 @@
-import { useEffect, useMemo } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '../store/store';
-import { fetchLessons, setCategoryFilter, setCityFilter } from '../store/lessonsSlice';
+import { useLessons } from '../hooks/useLessons';
 import LessonCard from '../components/LessonCard';
 import Layout from '../components/Layout';
 
 const CATEGORIES = ['חסידות', 'מוסר', 'הלכה', 'משנה', 'גמרא', 'פרשת שבוע'];
 
 function AllLessons() {
-    const dispatch = useDispatch<AppDispatch>();
-    const { list, loading, error, categoryFilter, cityFilter } = useSelector(
-        (state: RootState) => state.lessons
-    );
-
-    // Fetch all lessons from the API on first render
-    useEffect(() => {
-        dispatch(fetchLessons());
-    }, [dispatch]);
-
-    // Client-side filtering — only recomputes when list or filters change
-    const filtered = useMemo(() => {
-        return list.filter((lesson) => {
-            const matchesCategory = !categoryFilter || lesson.category === categoryFilter;
-            const matchesCity = !cityFilter || lesson.city === cityFilter;
-            return matchesCategory && matchesCity;
-        });
-    }, [list, categoryFilter, cityFilter]);
+    const { filtered, loading, error, categoryFilter, cityFilter, setCategory, setCity } = useLessons();
 
     return (
         <Layout>
+            <header className="py-5 bg-white border-bottom text-center">
+                <h1 className="fw-bold mb-4">כל השיעורים</h1>
 
-            {/* Search / filter header */}
-            <header className="search-header">
-                <h1>כל השיעורים</h1>
+                <div className="d-flex flex-wrap justify-content-center align-items-center gap-2">
+                    <button
+                        className={`btn btn-sm btn-filter ${!categoryFilter ? 'active' : 'btn-outline-secondary'}`}
+                        onClick={() => setCategory('')}
+                    >
+                        הכל
+                    </button>
 
-                <div className="filter-row">
-                    {/* Category filter buttons */}
-                    <div className="category-buttons">
+                    {CATEGORIES.map(cat => (
                         <button
-                            className={`filter-btn ${!categoryFilter ? 'active' : ''}`}
-                            onClick={() => dispatch(setCategoryFilter(''))}
+                            key={cat}
+                            className={`btn btn-sm btn-filter ${categoryFilter === cat ? 'active' : 'btn-outline-secondary'}`}
+                            onClick={() => setCategory(cat)}
                         >
-                            הכל
+                            {cat}
                         </button>
-                        {CATEGORIES.map((cat) => (
-                            <button
-                                key={cat}
-                                className={`filter-btn ${categoryFilter === cat ? 'active' : ''}`}
-                                onClick={() => dispatch(setCategoryFilter(cat))}
-                            >
-                                {cat}
-                            </button>
-                        ))}
-                    </div>
+                    ))}
 
-                    {/* City filter dropdown */}
-                    <div className="city-dropdown-box">
-                        <select
-                            className="city-select-dropdown"
-                            value={cityFilter}
-                            onChange={(e) => dispatch(setCityFilter(e.target.value))}
-                        >
-                            <option value="">כל הערים</option>
-                            <option value="פרדס חנה">פרדס חנה</option>
-                            <option value="נתניה">נתניה</option>
-                        </select>
-                    </div>
+                    <select
+                        className="form-select form-select-sm w-auto"
+                        value={cityFilter}
+                        onChange={e => setCity(e.target.value)}
+                    >
+                        <option value="">כל הערים</option>
+                        <option value="פרדס חנה">פרדס חנה</option>
+                        <option value="נתניה">נתניה</option>
+                    </select>
                 </div>
             </header>
 
-            {/* Lessons grid */}
-            <main className="lessons-search-container">
+            <main className="container py-5">
+                {loading && <p className="text-center text-muted">טוען שיעורים...</p>}
 
-                {loading && (
-                    <div className="text-center p-5">טוען שיעורים...</div>
-                )}
-
-                {error && (
-                    <div className="text-center p-5" style={{ color: 'red' }}>
-                        שגיאה בטעינת השיעורים: {error}
-                    </div>
-                )}
+                {error && <p className="text-center text-danger">{error}</p>}
 
                 {!loading && !error && filtered.length === 0 && (
-                    <div className="text-center p-5">
-                        לא נמצאו שיעורים בקטגוריה זו
-                    </div>
+                    <p className="text-center text-muted">לא נמצאו שיעורים בקטגוריה זו</p>
                 )}
 
                 {!loading && !error && filtered.length > 0 && (
-                    <div className="search-lessons-grid">
-                        {filtered.map((lesson) => (
-                            <LessonCard
-                                key={lesson._id}
-                                id={lesson._id}
-                                title={lesson.title}
-                                teacher={lesson.creator?.name || 'מורה'}
-                                category={lesson.category}
-                                city={lesson.city}
-                                date={lesson.date}
-                                time={lesson.time}
-                                rating={lesson.rating}
-                                image={lesson.image}
-                            />
+                    <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                        {filtered.map(lesson => (
+                            <div key={lesson._id} className="col">
+                                <LessonCard
+                                    id={lesson._id}
+                                    title={lesson.title}
+                                    teacher={lesson.creator?.name || 'מורה'}
+                                    category={lesson.category}
+                                    city={lesson.city}
+                                    date={lesson.date}
+                                    time={lesson.time}
+                                    rating={lesson.rating}
+                                    image={lesson.image}
+                                />
+                            </div>
                         ))}
                     </div>
                 )}
-
             </main>
         </Layout>
     );

@@ -13,5 +13,6 @@ export const createLessonSchema = Joi.object({
         .required(),
     date: Joi.string().required(),
     time: Joi.string().required(),
-    maxParticipants: Joi.number().min(1).max(500).optional()
+    maxParticipants: Joi.number().min(1).max(500).optional(),
+    image: Joi.string().allow('').optional()
 });

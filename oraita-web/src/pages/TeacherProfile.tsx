@@ -1,241 +1,98 @@
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import LessonCard from '../components/LessonCard';
+import { useTeacherProfile } from '../hooks/useTeacherProfile';
 
-
-// Teacher profile page component
 function TeacherProfile() {
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const { lessons, loading, error, creatorName, cities, avgRating } = useTeacherProfile(id);
+
+    if (loading) return <Layout><p className="text-center mt-5">טוען...</p></Layout>;
+
+    if (error) return (
+        <Layout>
+            <p className="text-center mt-5">{error}</p>
+            <div className="text-center">
+                <Link to="/alllessons" className="btn btn-dark">חזרה לכל השיעורים</Link>
+            </div>
+        </Layout>
+    );
+
+    if (lessons.length === 0) return (
+        <Layout>
+            <p className="text-center mt-5">לא נמצאו שיעורים עבור מורה זה</p>
+            <div className="text-center mt-3">
+                <Link to="/alllessons" className="btn btn-dark">חזרה לכל השיעורים</Link>
+            </div>
+        </Layout>
+    );
+
+    // Stat badges defined as an array — rendered with .map()
+    const statBadges = [
+        { icon: '📚', label: 'מספר שיעורים', value: lessons.length },
+        ...(avgRating ? [{ icon: '⭐', label: 'דירוג ממוצע', value: avgRating }] : []),
+        { icon: '📍', label: 'ערים', value: cities },
+    ];
+
     return (
-           <Layout>
-
+        <Layout>
             {/* Cover banner */}
-            <div className="profile-cover-banner"></div>
+            <div className="profile-cover" />
 
-            {/* Teacher profile section */}
-            <header className="profile-identity-container">
-
-                {/* Back button */}
-                <div className="back-button-container">
-                    <a
-                        href="#"
-                        className="btn-back"
+            {/* Identity card — avatar overlaps cover via negative margin in CSS */}
+            <div className="container">
+                <div className="card border-0 shadow-sm mx-auto text-center pb-4 px-4 position-relative" style={{ maxWidth: 900 }}>
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="btn btn-sm btn-link text-muted position-absolute"
+                        style={{ top: 16, right: 16 }}
                     >
-                        ← חזרה לכל השיעורים
-                    </a>
-                </div>
+                        ← חזרה
+                    </button>
 
-                {/* Avatar */}
-                <div className="profile-avatar-wrapper">
-                    <span className="profile-avatar-icon">
-                        👤
-                    </span>
-                </div>
+                    <div className="profile-avatar">👤</div>
 
-                {/* Teacher name */}
-                <h1 className="profile-teacher-name">
-                    הרב דוד כהן
-                </h1>
+                    <h1 className="fw-bold mb-3">{creatorName}</h1>
 
-                {/* Teacher bio */}
-                <p className="profile-teacher-bio">
-                    מרצה למחשבת ישראל, בעל ניסיון של מעל עשור
-                    בהוראת תנ"ך ופרשת השבוע, ומחבר סדרת המאמרים
-                    'אורות הפרשה'. מתמחה בחיבור עולם החסידות
-                    לחיי המעשה.
-                </p>
-
-                {/* Teacher statistics */}
-                <div className="profile-stats-row">
-
-                    <div className="profile-stat-badge">
-                        <span className="stat-badge-icon">📚</span>
-                        <span className="stat-badge-text">
-                            מספר שיעורים:
-                            <strong>12</strong>
-                        </span>
-                    </div>
-
-                    <div className="profile-stat-badge">
-                        <span className="stat-badge-icon">⭐</span>
-                        <span className="stat-badge-text">
-                            דירוג ממוצע:
-                            <strong>4.8</strong>
-                        </span>
-                    </div>
-
-                    <div className="profile-stat-badge">
-                        <span className="stat-badge-icon">📍</span>
-                        <span className="stat-badge-text">
-                            עיר:
-                            <strong>פרדס חנה</strong>
-                        </span>
-                    </div>
-
-                </div>
-
-            </header>
-
-            {/* Teacher lessons */}
-            <main className="teacher-catalog-container">
-
-                <h2 className="catalog-section-title">
-                    השיעורים של המורה
-                </h2>
-
-                <div className="search-lessons-grid">
-
-                    {/* Lesson card 1 */}
-                    <div className="lesson-search-card">
-
-                        <div className="card-image-box">
-                            <img
-                                src="https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop"
-                                alt="Lesson"
-                            />
-                            <span className="card-tag">
-                                פרשת שבוע
+                    {/* Stat badges — .map() over statBadges array */}
+                    <div className="d-flex flex-wrap justify-content-center gap-2 border-top pt-4">
+                        {statBadges.map((badge, i) => (
+                            <span key={i} className="badge bg-light text-dark border py-2 px-3 fs-6 fw-normal">
+                                {badge.icon} {badge.label}: <strong>{badge.value}</strong>
                             </span>
-                        </div>
-
-                        <div className="card-body-content">
-                            <div className="card-rating">
-                                ⭐ 4.8
-                            </div>
-
-                            <h3>
-                                מעמיק בפרשת וירא
-                            </h3>
-
-                            <div className="card-meta-details">
-                                <span>📍 פרדס חנה</span>
-                                <span>📅 12 במאי 2026 | 🕒 19:00</span>
-                            </div>
-
-                            <a
-                                href="#"
-                                className="btn-details-action"
-                            >
-                                לפרטים נוספים
-                            </a>
-                        </div>
-
+                        ))}
                     </div>
+                </div>
+            </div>
 
-                    {/* Lesson card 2 */}
-                    <div className="lesson-search-card">
+            {/* Lesson grid — reuses LessonCard component */}
+            <main className="container py-5">
+                <h2 className="fw-bold mb-4 text-end">השיעורים של המורה</h2>
 
-                        <div className="card-image-box">
-                            <img
-                                src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=400&auto=format&fit=crop"
-                                alt="Lesson"
+                <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-5">
+                    {lessons.map(lesson => (
+                        <div key={lesson._id} className="col">
+                            <LessonCard
+                                id={lesson._id}
+                                title={lesson.title}
+                                teacher={lesson.creator.name}
+                                category={lesson.category}
+                                city={lesson.city}
+                                date={lesson.date}
+                                time={lesson.time}
+                                rating={lesson.rating}
+                                image={lesson.image}
                             />
-                            <span className="card-tag">
-                                חסידות
-                            </span>
                         </div>
-
-                        <div className="card-body-content">
-                            <div className="card-rating">
-                                ⭐ 4.9
-                            </div>
-
-                            <h3>
-                                תורת הבעל שם טוב לחיים
-                            </h3>
-
-                            <div className="card-meta-details">
-                                <span>📍 פרדס חנה</span>
-                                <span>📅 18 במאי 2026 | 🕒 20:30</span>
-                            </div>
-
-                            <a
-                                href="#"
-                                className="btn-details-action"
-                            >
-                                לפרטים נוספים
-                            </a>
-                        </div>
-
-                    </div>
-
-                    {/* Lesson card 3 */}
-                    <div className="lesson-search-card">
-
-                        <div className="card-image-box">
-                            <img
-                                src="https://images.unsplash.com/photo-1435527173128-983b87a01f4d?q=80&w=400&auto=format&fit=crop"
-                                alt="Lesson"
-                            />
-                            <span className="card-tag">
-                                מוסר
-                            </span>
-                        </div>
-
-                        <div className="card-body-content">
-                            <div className="card-rating">
-                                ⭐ 4.7
-                            </div>
-
-                            <h3>
-                                פרקי אבות ותיקון המידות
-                            </h3>
-
-                            <div className="card-meta-details">
-                                <span>📍 נתניה</span>
-                                <span>📅 24 במאי 2026 | 🕒 19:15</span>
-                            </div>
-
-                            <a
-                                href="#"
-                                className="btn-details-action"
-                            >
-                                לפרטים נוספים
-                            </a>
-                        </div>
-
-                    </div>
-
+                    ))}
                 </div>
 
-                {/* Teacher actions */}
-                <section
-                    className="cta-box"
-                    style={{marginTop:'60px',marginBottom:'20px'}}
-                >
-                    <div className="cta-content">
-
-                        <div className="cta-btns">
-
-                            <a
-                                href="#"
-                                className="btn-dark"
-                                style={{
-                                    textDecoration:'none',
-                                    display:'inline-block',
-                                    lineHeight:'1.2'
-                                }}
-                            >
-                                יצירת שיעור חדש ⊕
-                            </a>
-
-                            <a
-                                href="#"
-                                className="btn-light-outline"
-                                style={{
-                                    textDecoration:'none',
-                                    display:'inline-block',
-                                    lineHeight:'1.2'
-                                }}
-                            >
-                                חזרה לכל השיעורים
-                            </a>
-
-                        </div>
-
-                    </div>
-                </section>
-
+                <div className="text-center">
+                    <Link to="/alllessons" className="btn btn-outline-dark">חזרה לכל השיעורים</Link>
+                </div>
             </main>
-
-         </Layout>
+        </Layout>
     );
 }
 

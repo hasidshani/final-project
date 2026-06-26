@@ -18,6 +18,9 @@ A Torah lessons platform called **אורייתא**. Users can browse, register f
 | State | Context API (auth) + Redux Toolkit (lessons) |
 | HTTP client | Axios |
 | Security | Helmet + express-rate-limit + JOI validation |
+| File upload | Multer (disk storage → `public/`) + separate `/api/file` route |
+| Design | Bootstrap 5 + custom CSS variables (gold theme, RTL) |
+| React patterns | Custom hooks (`src/hooks/`), reusable components, `.map()` lists |
 
 ---
 
@@ -47,12 +50,18 @@ Must be running locally (MongoDB Compass). Connection: `mongodb://localhost/orai
 FinalProject/
 ├── CLAUDE.md                        ← tells Claude to read this file
 ├── PROGRESS.md                      ← this file
+├── README.md                        ← project documentation for grading
+├── .gitignore                       ← excludes dist/, uploads/*, public/*, server/.env, oraita-web/.env
 ├── package.json                     ← backend scripts + dependencies
 ├── tsconfig.json                    ← backend TypeScript config
+├── public/                          ← uploaded lesson images (served at /public/*)
+│   └── .gitkeep
+├── uploads/                         ← legacy folder (kept for backwards compatibility)
+│   └── .gitkeep
 ├── server/
 │   ├── .env                         ← secrets (never commit)
-│   ├── .env.example                 ← committed placeholder
-│   ├── app.ts                       ← Express app + all middleware
+│   ├── .env.example                 ← committed placeholder (includes SERVER_URL)
+│   ├── app.ts                       ← Express app + middleware + serves /public + /uploads static
 │   ├── server.ts                    ← MongoDB connect + server start
 │   ├── types/
 │   │   └── express.d.ts             ← extends Request with userId?: string
@@ -62,50 +71,62 @@ FinalProject/
 │   │   └── comments.ts              ← Comment schema (lesson, user, text)
 │   ├── controllers/
 │   │   ├── userController.ts        ← register, login, logout, refresh, getMe, addFavorite, removeFavorite
-│   │   ├── lessonController.ts      ← createLesson, getAllLessons, getLessonById, joinLesson, deleteLesson
+│   │   ├── lessonController.ts      ← createLesson reads image from req.body (URL string, not req.file)
 │   │   └── commentController.ts     ← createComment, getCommentsByLesson, deleteComment
 │   ├── routes/
 │   │   ├── users_routes.ts          ← /api/users/*
-│   │   ├── lessons_routes.ts        ← /api/lessons/*
-│   │   └── comments_routes.ts       ← /api/comments/*
+│   │   ├── lessons_routes.ts        ← /api/lessons/* (POST / is JSON — no multer here anymore)
+│   │   ├── comments_routes.ts       ← /api/comments/*
+│   │   └── file_routes.ts           ← /api/file (POST / — multer saves to public/, returns {url})
 │   ├── middleware/
 │   │   ├── authMiddleware.ts        ← JWT verify → sets req.userId
 │   │   ├── errorHandler.ts          ← global 4-param error handler
 │   │   ├── logger.ts                ← request logger
-│   │   ├── validate.ts              ← JOI middleware wrapper
+│   │   ├── validate.ts              ← JOI middleware wrapper (stripUnknown: true)
+│   │   ├── upload.ts                ← legacy Multer config (kept, no longer used in lesson creation)
 │   │   └── rateLimiter.ts           ← apiLimiter (100/15min) + authLimiter (10/15min)
 │   └── validation/
 │       ├── userValidation.ts        ← registerSchema, loginSchema
-│       └── lessonValidation.ts      ← createLessonSchema
+│       └── lessonValidation.ts      ← createLessonSchema (includes optional image string)
 └── oraita-web/
     ├── package.json                 ← frontend dependencies
-    ├── src/
-    │   ├── main.tsx                 ← Redux Provider + AuthProvider + App
-    │   ├── App.tsx                  ← Routes (lazy loaded) + PrivateRoute
-    │   ├── index.css                ← all custom styles (RTL, Hebrew UI)
-    │   ├── services/
-    │   │   └── api.ts               ← Axios instance (baseURL + token interceptor + 401 redirect)
-    │   ├── context/
-    │   │   └── AuthContext.tsx      ← AuthProvider + useAuth hook (login/logout/loading/user)
-    │   ├── store/
-    │   │   ├── store.ts             ← Redux configureStore (lessons reducer)
-    │   │   └── lessonsSlice.ts      ← fetchLessons thunk + setCategoryFilter + setCityFilter
-    │   ├── components/
-    │   │   ├── Navbar.tsx           ← navigation bar (⚠ STILL HARDCODED — needs logout + user name)
-    │   │   ├── Footer.tsx           ← footer
-    │   │   ├── Layout.tsx           ← wraps pages with Navbar + Footer
-    │   │   ├── LessonCard.tsx       ← React.memo + date formatting + image fallback
-    │   │   └── PrivateRoute.tsx     ← redirects to /login if not authenticated
-    │   └── pages/
-    │       ├── HomePage.tsx         ← landing page (static, not connected)
-    │       ├── Login.tsx            ← ✅ Axios + AuthContext + useNavigate + inline errors
-    │       ├── Register.tsx         ← ✅ Axios + useNavigate + inline errors
-    │       ├── Dashboard.tsx        ← ⚠ hardcoded data — needs real API data
-    │       ├── AllLessons.tsx       ← ✅ Redux + real API + category/city filters
-    │       ├── CreateLesson.tsx     ← ✅ Axios + fixed category bug + error handling
-    │       ├── SingleLesson.tsx     ← ✅ real data + join + favorites + comments
-    │       ├── TeacherProfile.tsx   ← ⚠ static placeholder — needs real data
-    │       └── NotFound.tsx         ← 404 page
+    ├── .env                         ← VITE_API_URL=http://localhost:3000/api (gitignored)
+    ├── .env.example                 ← committed placeholder
+    └── src/
+        ├── main.tsx                 ← Redux Provider + AuthProvider + App
+        ├── App.tsx                  ← Routes (lazy loaded) + PrivateRoute
+        ├── index.css                ← ~90 lines: CSS vars, gold theme, Bootstrap overrides only
+        ├── services/
+        │   └── api.ts               ← Axios instance (VITE_API_URL + token interceptor + 401 redirect)
+        ├── context/
+        │   └── AuthContext.tsx      ← AuthProvider + useAuth hook (login/logout/loading/user)
+        ├── store/
+        │   ├── store.ts             ← Redux configureStore (lessons reducer)
+        │   └── lessonsSlice.ts      ← fetchLessons thunk + setCategoryFilter + setCityFilter
+        ├── hooks/                   ← custom React hooks (logic separated from pages)
+        │   ├── useLessons.ts        ← fetchLessons + filter by category/city/past
+        │   ├── useDashboard.ts      ← fetch joined/created/favorites for logged-in user
+        │   ├── useSingleLesson.ts   ← fetch lesson + join + addFavorite actions
+        │   ├── useComments.ts       ← fetch comments + addComment
+        │   └── useTeacherProfile.ts ← fetch teacher's future lessons + avgRating + cities
+        ├── components/
+        │   ├── Navbar.tsx           ← Bootstrap navbar + navLinks.map() + AuthContext
+        │   ├── Footer.tsx           ← Bootstrap footer + FOOTER_LINKS.map()
+        │   ├── Layout.tsx           ← wraps pages with Navbar + Footer
+        │   ├── LessonCard.tsx       ← Bootstrap card + image fallback (Unsplash)
+        │   ├── StatCard.tsx         ← reusable stat card (icon, count, label, iconBg prop)
+        │   ├── CommentCard.tsx      ← reusable comment card (authorName, date, text props)
+        │   └── PrivateRoute.tsx     ← redirects to /login if not authenticated
+        └── pages/
+            ├── HomePage.tsx         ← CITIES.map() + CATEGORIES.map() + Bootstrap sections
+            ├── Login.tsx            ← Bootstrap card + form-control
+            ├── Register.tsx         ← FIELDS.map() replaces 4 copy-pasted form groups
+            ├── Dashboard.tsx        ← useDashboard hook + StatCard + TABS.map() + LessonRow
+            ├── AllLessons.tsx       ← useLessons hook + CATEGORIES.map() + Bootstrap grid
+            ├── CreateLesson.tsx     ← hidden file input + image preview + upload-then-submit flow
+            ├── SingleLesson.tsx     ← useSingleLesson + useComments hooks + Bootstrap layout
+            ├── TeacherProfile.tsx   ← useTeacherProfile hook + LessonCard + statBadges.map()
+            └── NotFound.tsx         ← Bootstrap centered 404 page
 ```
 
 ---
@@ -117,7 +138,7 @@ Base URL: `http://localhost:3000/api`
 ### Users (`/api/users`)
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
-| GET | `/me` | ✅ | Get current logged-in user |
+| GET | `/me` | ✅ | Get current logged-in user (with favorites array) |
 | POST | `/register` | ❌ | Register (JOI + rate limited) |
 | POST | `/login` | ❌ | Login → returns accessToken + refreshToken |
 | POST | `/logout` | ❌ | Invalidate refresh token |
@@ -128,11 +149,16 @@ Base URL: `http://localhost:3000/api`
 ### Lessons (`/api/lessons`)
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
-| GET | `/` | ❌ | Get all lessons (populated with creator) |
-| POST | `/` | ✅ | Create lesson (JOI validated) |
-| GET | `/:id` | ❌ | Get single lesson (populated creator + participants) |
+| GET | `/` | ❌ | Get all lessons (creator populated) |
+| POST | `/` | ✅ | Create lesson — JSON body (image is a URL string, not a file) |
+| GET | `/:id` | ❌ | Get single lesson (creator + participants populated) |
 | POST | `/:id/join` | ✅ | Join lesson (checks capacity) |
 | DELETE | `/:id` | ✅ | Delete lesson (creator only) |
+
+### File Upload (`/api/file`)
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| POST | `/` | ❌ | Upload image → saved to `public/` → returns `{ url: "http://localhost:3000/public/filename.jpg" }` |
 
 ### Comments (`/api/comments`)
 | Method | Route | Auth | Description |
@@ -140,6 +166,12 @@ Base URL: `http://localhost:3000/api`
 | GET | `/lesson/:lessonId` | ❌ | Get comments for a lesson |
 | POST | `/:lessonId` | ✅ | Add comment |
 | DELETE | `/:id` | ✅ | Delete comment (owner only) |
+
+### Static files
+| Path | Description |
+|------|-------------|
+| `GET /public/:filename` | Serves uploaded images (Cross-Origin-Resource-Policy: cross-origin) |
+| `GET /uploads/:filename` | Legacy path — kept for backwards compatibility |
 
 ### Auth header format
 ```
@@ -157,9 +189,9 @@ Authorization: Bearer <accessToken>
 
 ### Lesson
 ```ts
-{ title, description, category (enum), city (enum), date, time, image, creator: ObjectId→User, participants: [ObjectId→User], maxParticipants (default 50), rating (0-5), timestamps }
+{ title, description, category (enum), city (enum), date, time, image (URL string), creator: ObjectId→User, participants: [ObjectId→User], maxParticipants (default 50), rating (0-5), timestamps }
 ```
-Valid categories: `חסידות | מוסר | הלכה | משנה | גמרא | פרשת שבוע`  
+Valid categories: `חסידות | מוסר | הלכה | משנה | גמרא | פרשת שבוע`
 Valid cities: `נתניה | פרדס חנה`
 
 ### Comment
@@ -169,7 +201,22 @@ Valid cities: `נתניה | פרדס חנה`
 
 ---
 
-## Environment Variables (`server/.env`)
+## Image Upload Flow (Lecturer's Approach)
+
+1. User clicks 📷 button on CreateLesson form → hidden `<input type="file">` opens via `useRef`
+2. `URL.createObjectURL(file)` shows local preview immediately (no network request yet)
+3. On form submit:
+   - **Step 1:** `POST /api/file` with `multipart/form-data` → Multer saves to `FinalProject/public/filename.jpg` → returns `{ url: "http://localhost:3000/public/filename.jpg" }`
+   - **Step 2:** `POST /api/lessons` with JSON body including `image: url`
+4. Lesson stored in MongoDB with image URL in the `image` field
+5. To verify: open MongoDB Compass → `lessons` collection → find lesson → `image` field shows full URL
+6. Frontend `<img src={lesson.image}>` loads from that URL
+
+---
+
+## Environment Variables
+
+### Backend — `server/.env`
 ```
 PORT=3000
 DATABASE_URL=mongodb://localhost/oraita_db
@@ -177,116 +224,101 @@ TOKEN_SECRET=mySuperSecretKey123
 TOKEN_EXPIRATION=1h
 REFRESH_TOKEN_EXPIRATION=7d
 CLIENT_URL=http://localhost:5173
+SERVER_URL=http://localhost:3000
 NODE_ENV=development
 ```
 
----
-
-## What Was Done (Session Log)
-
-### Backend fixes & features added
-- ✅ Fixed duplicate `express.json()` in `app.ts`
-- ✅ Added global error handler (`middleware/errorHandler.ts`) — 4-param signature
-- ✅ Added request logger (`middleware/logger.ts`)
-- ✅ Added Helmet security headers
-- ✅ Added rate limiting — `apiLimiter` (all /api routes) + `authLimiter` (login/register)
-- ✅ Added JOI validation — `userValidation.ts` + `lessonValidation.ts` + `validate.ts` middleware
-- ✅ Added `/api/users/me` route — restores session on page refresh
-- ✅ Added `server/types/express.d.ts` — extends Express `Request` with `userId?: string`
-- ✅ **Fixed critical Express 5 bug:** `req.query.userId` was silently lost between middleware in Express 5 (re-parses query from URL on each access). Fixed by using `req.userId` throughout all controllers and authMiddleware
-- ✅ Added `server/.env.example`
-- ✅ Installed: `helmet`, `express-rate-limit`, `joi`, `@types/joi`
-
-### Frontend fixes & features added
-- ✅ Installed: `axios`, `@reduxjs/toolkit`, `react-redux`
-- ✅ Created `services/api.ts` — Axios instance with base URL + request interceptor (auto-attach token) + response interceptor (redirect to /login on 401)
-- ✅ Created `context/AuthContext.tsx` — `useAuth` hook, session restore on mount via `/api/users/me`, login/logout functions
-- ✅ Created `store/lessonsSlice.ts` — `fetchLessons` async thunk + `setCategoryFilter` + `setCityFilter`
-- ✅ Created `store/store.ts` — Redux store
-- ✅ Created `components/PrivateRoute.tsx` — redirects to /login if not authenticated, preserves intended destination
-- ✅ Updated `main.tsx` — wrapped with `<Provider store>` + `<AuthProvider>`
-- ✅ Updated `App.tsx` — all pages lazy loaded (`React.lazy` + `Suspense`), Dashboard + CreateLesson protected via `PrivateRoute`
-- ✅ Updated `Login.tsx` — Axios, AuthContext.login(), useNavigate, inline error state, loading state, redirects to intended page after login
-- ✅ Updated `Register.tsx` — Axios, useNavigate, inline error state (shows all JOI errors), loading state
-- ✅ Updated `CreateLesson.tsx` — Axios, fixed category bug (`"פרשת השבוע"` → `"פרשת שבוע"`), error/loading state, navigates to /alllessons on success
-- ✅ Updated `LessonCard.tsx` — wrapped with `React.memo`, `id` changed from `number` to `string`, date formatted to Hebrew locale, image fallback
-- ✅ Updated `AllLessons.tsx` — uses Redux (useDispatch + useSelector), fetches real lessons from API, category filter buttons dispatch `setCategoryFilter`, city dropdown dispatches `setCityFilter`, filtered with `useMemo`, loading/error/empty states
-- ✅ Updated `SingleLesson.tsx` — fetches real lesson by ID, fetches comments, join lesson button, add to favorites button, post comment form, proper loading/error states, shows real participants list
+### Frontend — `oraita-web/.env`
+```
+VITE_API_URL=http://localhost:3000/api
+```
 
 ---
 
 ## Current State
 
-### ✅ Working
-- Register → Login → Dashboard flow (auth persists on refresh)
-- Protected routes redirect to /login
-- Create lesson (category bug fixed)
-- All lessons page with real data + working category/city filters
-- Single lesson page with join, favorites, comments
+### ✅ Everything Working
+- Register → Login → Dashboard flow (auth persists on refresh via `/api/users/me`)
+- Protected routes redirect to /login, return to intended page after login
+- Navbar: shows user name + logout when logged in, login link when logged out
+- Dashboard: real data — joined lessons / created lessons / favorites tabs with live counts
+- All Lessons: real API data + category/city filters + **past lessons hidden**
+- Create Lesson: image picker (hidden input + preview) → uploads to `/api/file` → lesson created with image URL
+- Single Lesson: join, favorites, comments, teacher name links to TeacherProfile, lesson image displayed
+- Teacher Profile: real lessons by creator (future only), lesson count, avg rating, city list
 - JWT access + refresh token rotation
 - JOI validation with inline errors on frontend
-- Helmet security headers
-- Rate limiting
-- React.memo on LessonCard
-- Lazy loading on all pages (separate JS chunks per route)
+- Helmet security headers + Rate limiting
+- React.memo on LessonCard + lazy loading on all pages
 - Global error handler
+- Bootstrap 5 design + RTL Hebrew UI + gold theme
+- Custom hooks folder (`src/hooks/`) — all logic separated from pages
+- Reusable components: `StatCard`, `CommentCard`, `LessonCard`
+- `.map()` used throughout for all lists (categories, cities, tabs, lessons, comments, fields)
+- Image upload working: `public/` folder served with correct CORP headers
+- README.md written with all required sections
 
-### ⚠ Still Needs Work
-1. **Dashboard** — shows hardcoded data. Needs real data: user's name from AuthContext, joined lessons from API
-2. **Navbar** — shows static links. Needs: show user name when logged in, logout button, hide "login" link when logged in
-3. **TeacherProfile** — static placeholder. Needs: fetch lessons by creator ID
-4. **Multer file upload** — UI exists in CreateLesson but image field is not sent to backend. Needs: multer middleware on backend + FormData on frontend
-5. **Deployment** — not yet deployed. Target: Vercel (frontend) + Render/Railway (backend)
-6. **README.md** — required for grading (tech stack, setup instructions, API table, screenshots, live URL)
-
----
-
-## Remaining Steps
-
-### Step 10 — Dashboard with real data
-- Read user from `useAuth()` → show real name in header
-- Fetch `/api/lessons` → filter by `lesson.participants.includes(user._id)` for joined lessons
-- Fetch `/api/lessons` → filter by `lesson.creator._id === user._id` for created lessons
-- Show real counts in stat cards
-
-### Step 11 — Navbar connected to AuthContext
-- `const { user, logout } = useAuth()`
-- If `user`: show user name + logout button (calls `logout()` + navigate to `/`)
-- If not `user`: show login link
-- `useNavigate` for logout redirect
-
-### Step 12 — TeacherProfile
-- Route is `/teacherprofile/:id` (already set in App.tsx)
-- Fetch lessons where `creator._id === id`
-- Show creator info + their lessons grid
-
-### Step 13 — Multer image upload
-- Backend: `npm install multer @types/multer`
-- Add `uploads/` folder + serve static files in `app.ts`
-- Add `upload.single('image')` middleware to POST `/api/lessons`
-- Frontend: use `FormData` instead of JSON in CreateLesson
-
-### Step 14 — Deployment
-- Frontend → Vercel (set `VITE_API_URL` env var)
-- Backend → Render or Railway (set all env vars)
-- MongoDB Atlas for production database
-
-### Step 15 — README.md
-Required sections: project description, tech stack, setup instructions, API endpoints table, screenshots, team/author, live URL
+### ⚠ Still To Do (manual steps only)
+1. **Deploy** — MongoDB Atlas → Render (backend) → Vercel (frontend). See deployment guide below.
+2. **Update README** — replace `_coming soon_` with real live URLs once deployed.
+3. **Mobile responsiveness** — do a quick check on phone after deploy.
 
 ---
 
-## Known Issues / Important Notes
+## Deployment Guide (manual steps)
 
-1. **Express 5 + req.query bug (FIXED):** Express 5 re-parses `req.query` from the URL on every access so `req.query.userId = value` in middleware was silently lost. Fixed via `server/types/express.d.ts` extending `Request` with `userId?: string` and using `req.userId` everywhere.
+### A — MongoDB Atlas
+1. [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → free M0 cluster
+2. Database Access → add user with password
+3. Network Access → `0.0.0.0/0`
+4. Connect → Drivers → copy connection string → replace `<password>`
 
-2. **Bootstrap location:** Bootstrap is in the root `node_modules/` (listed under root `package.json`), not in `oraita-web/package.json`. Vite resolves it from the parent directory. Works fine but should ideally be added to `oraita-web/package.json` too.
+### B — Render (backend)
+- Build command: `npm run build`
+- Start command: `npm run start`
+- Root directory: *(project root)*
+- Environment variables:
+  ```
+  DATABASE_URL   = <Atlas connection string>
+  TOKEN_SECRET   = <long random string>
+  TOKEN_EXPIRATION        = 1h
+  REFRESH_TOKEN_EXPIRATION = 7d
+  CLIENT_URL     = https://<your-vercel-url>.vercel.app
+  SERVER_URL     = https://<your-render-url>.onrender.com
+  NODE_ENV       = production
+  PORT           = 3000
+  ```
+- ⚠️ Note: Render's filesystem is ephemeral — uploaded images in `public/` are lost on restart. For production use Cloudinary/S3.
 
-3. **TeacherProfile route:** Changed from `/teacherprofile` to `/teacherprofile/:id` in `App.tsx`. Any existing links to `/teacherprofile` without an ID will 404.
+### C — Vercel (frontend)
+- Root directory: `oraita-web`
+- Framework: Vite (auto-detected)
+- Output directory: `dist`
+- Environment variables:
+  ```
+  VITE_API_URL = https://<your-render-url>.onrender.com/api
+  ```
 
-4. **`React.FormEvent<T>` deprecated in React 19:** Use `{ preventDefault(): void }` as the event type instead. Already fixed in Login, Register, CreateLesson, SingleLesson.
+### D — After both are live
+- Go back to Render → update `CLIENT_URL` to the real Vercel URL → redeploy
 
-5. **Category enum mismatch (FIXED):** CreateLesson had `value="פרשת השבוע"` but model/JOI expect `"פרשת שבוע"`. Fixed.
+---
+
+## Known Issues / Notes
+
+1. **Express 5 + req.query bug (FIXED):** Express 5 re-parses `req.query` on every access so `req.query.userId = value` in middleware is silently lost. Fixed via `server/types/express.d.ts` and `req.userId` everywhere.
+
+2. **Bootstrap location:** Bootstrap is in root `node_modules/` (root `package.json`), not `oraita-web/package.json`. Vite resolves it from the parent. Works fine.
+
+3. **Multer + ephemeral Render filesystem:** Uploaded images are stored on Render's ephemeral disk and are lost on restart. Acceptable for a student project; production would use Cloudinary/S3.
+
+4. **`React.FormEvent<T>` deprecated in React 19:** Use `{ preventDefault(): void }` as the event type instead. Already applied everywhere.
+
+5. **Past lesson filtering is client-side only:** Backend still returns all lessons. The `AllLessons`, `TeacherProfile`, and `Dashboard` pages filter on the frontend.
+
+6. **Helmet CORP header (FIXED):** Helmet adds `Cross-Origin-Resource-Policy: same-origin` to all responses by default. This blocked the React frontend (port 5173) from loading images served by the backend (port 3000) since they are different origins. Fixed by overriding the header to `cross-origin` specifically on the `/public` and `/uploads` static routes.
+
+7. **Image URL stored in MongoDB:** The `image` field in the `lessons` collection stores the full URL string (e.g. `http://localhost:3000/public/1234567890.jpg`). Visible in MongoDB Compass under the `lessons` collection.
 
 ---
 
@@ -304,9 +336,12 @@ Required sections: project description, tech stack, setup instructions, API endp
 ✅ GET /api/lessons/:id → 200 + populated creator + participants
 ✅ Helmet headers present (X-Frame-Options, Content-Security-Policy, etc.)
 ✅ Rate limit headers present (RateLimit-Limit, RateLimit-Remaining)
-✅ Frontend builds with zero TypeScript errors
+✅ Frontend builds with zero TypeScript errors (backend + frontend)
 ✅ Lazy loading: separate JS chunk per page in dist/assets/
 ✅ PrivateRoute: /dashboard without login → redirects to /login
+✅ POST /api/file with image → 200 + { url } saved to public/
+✅ Image URL stored in MongoDB lessons.image field
+✅ Image visible in SingleLesson page after upload
 ```
 
 ---
@@ -315,16 +350,69 @@ Required sections: project description, tech stack, setup instructions, API endp
 
 | Category | Points | Status |
 |----------|--------|--------|
-| Backend Architecture | 25 pts | ✅ MVC structure, error handler, middleware, no logic in routes |
+| Backend Architecture | 25 pts | ✅ MVC structure, error handler, middleware chain, no logic in routes |
 | Database Design | 15 pts | ✅ 3 collections, ObjectId refs, required fields, timestamps |
-| Authentication & Security | 20 pts | ✅ bcrypt, JWT, protected routes, rate limiting, Helmet |
-| Frontend — React & State | 20 pts | ✅ Context API + Redux, custom hooks, lazy loading, React.memo |
-| UI/UX & Responsiveness | 10 pts | ⚠ Loading/error states done, mobile responsiveness needs check |
-| Deployment | 5 pts | ❌ Not yet deployed |
-| Git Workflow & README | 5 pts | ❌ README missing, commit history needs improvement |
+| Authentication & Security | 20 pts | ✅ bcrypt, JWT + refresh tokens, protected routes, rate limiting, Helmet |
+| Frontend — React & State | 20 pts | ✅ Context API + Redux, custom hooks (`src/hooks/`), components, lazy loading, React.memo, `.map()` lists |
+| UI/UX & Responsiveness | 10 pts | ⚠ Loading/error states ✅ — mobile responsiveness needs manual check |
+| Deployment | 5 pts | ⚠ Code prepped — needs Atlas + Render + Vercel accounts (see guide above) |
+| Git Workflow & README | 5 pts | ✅ README.md complete + .env.example committed |
 
-**Easy wins still to grab:**
-- `.env.example` ✅ already committed
-- Postman collection — export and add to repo
-- README.md — write it
-- Deploy to Vercel + Render
+---
+
+## Session Log
+
+### Session 1
+- Full backend setup: MVC structure, JWT auth, JOI validation, Helmet, rate limiting, global error handler
+- Full frontend setup: Axios, AuthContext, Redux, PrivateRoute, Login, Register, AllLessons, CreateLesson, SingleLesson
+
+### Session 2
+- Dashboard connected to real API (joined/created/favorites tabs, live counts)
+- Navbar connected to AuthContext (conditional links, logout)
+- TeacherProfile — real data from API, creator link from SingleLesson
+- Multer image upload (backend middleware + frontend FormData)
+- Deployment code prep (VITE_API_URL env var, .gitignore, .env.example files)
+- README.md written
+- Past lesson filtering in AllLessons + TeacherProfile; past date/time blocked in CreateLesson
+
+### Session 3 (2026-06-26) — CSS → React Design Patterns
+- ✅ Slimmed `index.css` from 1464 → ~90 lines (Bootstrap handles layout)
+- ✅ Created `StatCard` component (props: icon, count, label, iconBg)
+- ✅ Created `CommentCard` component (props: authorName, date, text)
+- ✅ `LessonCard` — Bootstrap card classes + custom CSS for image/badge only
+- ✅ `Navbar` — Bootstrap navbar + `navLinks.map()` for link list
+- ✅ `Footer` — `FOOTER_LINKS.map()` per column
+- ✅ `AllLessons` — Bootstrap `row row-cols-*` grid + `CATEGORIES.map()` filter buttons
+- ✅ `Dashboard` — `StatCard` + `TABS.map()` for nav-tabs + local `LessonRow` component
+- ✅ `SingleLesson` — Bootstrap `row col-lg-8/col-lg-4` + `CommentCard` + `comments.map()`
+- ✅ `TeacherProfile` — reuses `LessonCard` component + `statBadges.map()`
+- ✅ `Login` / `Register` — Bootstrap card layout; `Register` uses `FIELDS.map()`
+- ✅ `CreateLesson` — `CATEGORIES.map()` / `CITIES.map()` for selects
+- ✅ `HomePage` — `CITIES.map()` + `CATEGORIES.map()` + Bootstrap hero/grid sections
+- ✅ `NotFound` — Bootstrap centered layout
+- ✅ Created `src/hooks/` folder with 5 custom hooks:
+  - `useLessons` — Redux dispatch + filter logic (category, city, past)
+  - `useDashboard` — fetches user's joined/created/favorites
+  - `useSingleLesson` — lesson data + join + addFavorite
+  - `useComments` — comments list + addComment
+  - `useTeacherProfile` — teacher's future lessons + avgRating + cities
+- ✅ All pages refactored: pages contain only JSX, all logic lives in hooks
+
+### Session 4 (2026-06-26) — Image Upload (Lecturer's Approach)
+- ✅ Created `server/routes/file_routes.ts` — dedicated upload endpoint
+  - Multer saves to `public/` folder (relative to CWD = project root)
+  - Returns `{ url: "http://localhost:3000/public/filename.jpg" }`
+- ✅ Created `FinalProject/public/` folder (at project root where server CWD is)
+- ✅ Updated `server/app.ts`:
+  - Serves `public/` at `/public` with `Cross-Origin-Resource-Policy: cross-origin`
+  - Registered `app.use('/api/file', fileRoutes)`
+- ✅ Updated `server/routes/lessons_routes.ts` — removed Multer from lesson POST (image is now JSON)
+- ✅ Updated `server/controllers/lessonController.ts` — reads `image` from `req.body` (URL string)
+- ✅ Updated `server/validation/lessonValidation.ts` — added `image: Joi.string().allow('').optional()`
+- ✅ Updated `oraita-web/src/pages/CreateLesson.tsx`:
+  - Hidden `<input type="file">` triggered via `useRef` + 📷 icon button
+  - `URL.createObjectURL()` for instant local preview
+  - Upload-then-submit: image uploaded to `/api/file` first, URL passed to lesson creation
+- ✅ Fixed Helmet CORP bug: `Cross-Origin-Resource-Policy: same-origin` blocked images loading from port 3000 in the frontend on port 5173
+- ✅ Updated `.gitignore`: `public/*` / `!public/.gitkeep`
+.

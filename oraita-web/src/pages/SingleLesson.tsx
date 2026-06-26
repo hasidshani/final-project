@@ -1,304 +1,184 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import CommentCard from '../components/CommentCard';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import { useSingleLesson } from '../hooks/useSingleLesson';
+import { useComments } from '../hooks/useComments';
 
-interface LessonCreator {
-    _id: string;
-    name: string;
-    email: string;
-    phone?: string;
-}
-
-interface Participant {
-    _id: string;
-    name: string;
-    phone?: string;
-}
-
-interface Lesson {
-    _id: string;
-    title: string;
-    description: string;
-    category: string;
-    city: string;
-    date: string;
-    time: string;
-    image: string;
-    creator: LessonCreator;
-    participants: Participant[];
-    maxParticipants: number;
-    rating: number;
-}
-
-interface Comment {
-    _id: string;
-    text: string;
-    user: { _id: string; name: string };
-    createdAt: string;
-}
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=1200&auto=format&fit=crop';
 
 function SingleLesson() {
     const { id } = useParams<{ id: string }>();
     const { user } = useAuth();
-    const navigate = useNavigate();
 
-    const [lesson, setLesson] = useState<Lesson | null>(null);
-    const [comments, setComments] = useState<Comment[]>([]);
-    const [loadingLesson, setLoadingLesson] = useState(true);
-    const [lessonError, setLessonError] = useState('');
+    const {
+        lesson, loading, error,
+        actionMsg, joining, favoriting,
+        join, addFavorite,
+        isParticipant, isFull,
+    } = useSingleLesson(id);
 
-    const [commentText, setCommentText] = useState('');
-    const [actionMsg, setActionMsg] = useState('');
-    const [joining, setJoining] = useState(false);
-    const [favoriting, setFavoriting] = useState(false);
+    const { comments, commentText, setCommentText, commentError, addComment } = useComments(id);
 
-    // Fetch lesson data
-    useEffect(() => {
-        if (!id) return;
-        setLoadingLesson(true);
-        api.get(`/lessons/${id}`)
-            .then((res) => setLesson(res.data.lesson))
-            .catch(() => setLessonError('השיעור לא נמצא'))
-            .finally(() => setLoadingLesson(false));
-    }, [id]);
-
-    // Fetch comments
-    useEffect(() => {
-        if (!id) return;
-        api.get(`/comments/lesson/${id}`)
-            .then((res) => setComments(res.data.comments))
-            .catch(() => {}); // comments are optional — don't block the page
-    }, [id]);
-
-    // Join lesson
-    const handleJoin = async () => {
-        if (!user) { navigate('/login'); return; }
-        setJoining(true);
-        setActionMsg('');
-        try {
-            await api.post(`/lessons/${id}/join`);
-            // Refresh lesson to update participants list
-            const res = await api.get(`/lessons/${id}`);
-            setLesson(res.data.lesson);
-            setActionMsg('נרשמת לשיעור בהצלחה!');
-        } catch (err: any) {
-            setActionMsg(err.response?.data?.message || 'שגיאה בהרשמה');
-        } finally {
-            setJoining(false);
-        }
-    };
-
-    // Add to favorites
-    const handleFavorite = async () => {
-        if (!user) { navigate('/login'); return; }
-        setFavoriting(true);
-        setActionMsg('');
-        try {
-            await api.post(`/users/favorites/${id}`);
-            setActionMsg('נוסף למועדפים!');
-        } catch (err: any) {
-            setActionMsg(err.response?.data?.message || 'שגיאה');
-        } finally {
-            setFavoriting(false);
-        }
-    };
-
-    // Post comment
-    const handleComment = async (e: { preventDefault(): void }) => {
-        e.preventDefault();
-        if (!commentText.trim() || !user) return;
-        try {
-            const res = await api.post(`/comments/${id}`, { text: commentText });
-            // Add new comment to the top of the list
-            setComments((prev) => [res.data.comment, ...prev]);
-            setCommentText('');
-        } catch (err: any) {
-            setActionMsg(err.response?.data?.message || 'שגיאה בשליחת הביקורת');
-        }
-    };
-
-    // Loading state
-    if (loadingLesson) {
-        return (
-            <Layout>
-                <div className="text-center p-5">טוען שיעור...</div>
-            </Layout>
-        );
-    }
-
-    // Error / not found state
-    if (lessonError || !lesson) {
-        return (
-            <Layout>
-                <div className="text-center p-5">{lessonError || 'השיעור לא נמצא'}</div>
-            </Layout>
-        );
-    }
+    if (loading) return <Layout><div className="text-center p-5">טוען שיעור...</div></Layout>;
+    if (error || !lesson) return <Layout><div className="text-center p-5">{error || 'השיעור לא נמצא'}</div></Layout>;
 
     const formattedDate = new Date(lesson.date).toLocaleDateString('he-IL', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+        year: 'numeric', month: 'long', day: 'numeric'
     });
-
-    const isParticipant = user
-        ? lesson.participants.some((p) => p._id === user._id)
-        : false;
-
-    const isFull = lesson.participants.length >= lesson.maxParticipants;
 
     return (
         <Layout>
-
-            {/* Lesson banner */}
+            {/* Full-width banner */}
             <div className="lesson-banner">
                 <img
-                    src={lesson.image || 'https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=1200&auto=format&fit=crop'}
+                    src={lesson.image || FALLBACK_IMG}
                     alt={lesson.title}
-                    onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                            'https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=1200&auto=format&fit=crop';
-                    }}
+                    onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
                 />
-                <span className="banner-tag">{lesson.category}</span>
+                <span className="lesson-banner-tag">{lesson.category}</span>
             </div>
 
-            <main className="single-lesson-container">
-                <div className="lesson-layout">
+            <main className="container py-5">
+                <div className="row g-4">
 
                     {/* Main column */}
-                    <div className="lesson-main-col">
+                    <div className="col-lg-8 text-end">
+                        <h1 className="fw-bold mb-3">{lesson.title}</h1>
 
-                        <h1 className="lesson-page-title">{lesson.title}</h1>
-
-                        <div className="lesson-meta-bar">
+                        <div className="d-flex flex-wrap gap-3 text-muted fw-semibold mb-4">
                             <span>📍 {lesson.city}</span>
-                            <span className="meta-divider">|</span>
+                            <span>|</span>
                             <span>📅 {formattedDate}</span>
-                            <span className="meta-divider">|</span>
+                            <span>|</span>
                             <span>🕒 {lesson.time}</span>
-                            <span className="meta-divider">|</span>
-                            <span>👤 {lesson.creator.name}</span>
+                            <span>|</span>
+                            <Link to={`/teacherprofile/${lesson.creator._id}`} className="text-decoration-none text-muted">
+                                👤 {lesson.creator.name}
+                            </Link>
                         </div>
 
-                        <div className="lesson-description">
-                            <p>{lesson.description}</p>
-                        </div>
+                        <p className="lead mb-4">{lesson.description}</p>
 
-                        <div className="rating-summary-box">
-                            <span className="rating-stars">
+                        <div className="d-inline-flex align-items-center bg-light px-3 py-2 rounded mb-4">
+                            <span className="fw-bold">
                                 ⭐ {lesson.rating > 0 ? lesson.rating.toFixed(1) : 'אין דירוג עדיין'}
                             </span>
                         </div>
 
-                        {/* Feedback message */}
                         {actionMsg && (
-                            <div className="error-message" style={{ background: '#e6f4ea', color: '#2d6a4f', borderColor: '#2d6a4f' }}>
-                                {actionMsg}
-                            </div>
+                            <div className="alert alert-success text-end">{actionMsg}</div>
                         )}
 
-                        {/* Comments section */}
-                        <section className="reviews-section">
-                            <h2>ביקורות משתתפים</h2>
+                        {/* Comments — CommentCard component + .map() */}
+                        <section>
+                            <h3 className="fw-bold mb-4">ביקורות משתתפים</h3>
 
-                            <div className="reviews-list">
-                                {comments.length === 0 && (
-                                    <p>אין ביקורות עדיין. היו הראשונים!</p>
-                                )}
-                                {comments.map((c) => (
-                                    <div key={c._id} className="review-card">
-                                        <div className="review-header">
-                                            <span className="reviewer-name">{c.user?.name}</span>
-                                            <span style={{ fontSize: '0.8rem', color: '#888' }}>
-                                                {new Date(c.createdAt).toLocaleDateString('he-IL')}
-                                            </span>
-                                        </div>
-                                        <p className="review-comment">{c.text}</p>
-                                    </div>
-                                ))}
-                            </div>
+                            {comments.length === 0 ? (
+                                <p className="text-muted mb-4">אין ביקורות עדיין. היו הראשונים!</p>
+                            ) : (
+                                <div className="d-flex flex-column gap-3 mb-4">
+                                    {comments.map(c => (
+                                        <CommentCard
+                                            key={c._id}
+                                            authorName={c.user?.name}
+                                            date={new Date(c.createdAt).toLocaleDateString('he-IL')}
+                                            text={c.text}
+                                        />
+                                    ))}
+                                </div>
+                            )}
 
-                            {/* Add comment — only for logged-in users */}
+                            {/* Add comment — conditional rendering */}
                             {user ? (
-                                <div className="add-review-box">
-                                    <h3>הוסיפו ביקורת</h3>
-                                    <form className="review-form" onSubmit={handleComment}>
-                                        <div className="form-group">
-                                            <label>התגובה שלכם:</label>
+                                <div className="card border-0 shadow-sm p-4">
+                                    <h5 className="fw-bold mb-3">הוסיפו ביקורת</h5>
+                                    {commentError && <div className="error-message">{commentError}</div>}
+                                    <form onSubmit={addComment}>
+                                        <div className="mb-3 text-end">
                                             <textarea
-                                                className="review-textarea"
+                                                className="form-control"
                                                 rows={4}
                                                 placeholder="כתבו את התרשמותכם מהשיעור..."
                                                 value={commentText}
-                                                onChange={(e) => setCommentText(e.target.value)}
+                                                onChange={e => setCommentText(e.target.value)}
                                                 required
                                             />
                                         </div>
-                                        <button type="submit" className="btn-submit-review">
-                                            שליחת ביקורת
-                                        </button>
+                                        <button type="submit" className="btn btn-dark">שליחת ביקורת</button>
                                     </form>
                                 </div>
                             ) : (
-                                <p>
-                                    <a href="/login">התחברו</a> כדי להוסיף ביקורת
+                                <p className="text-muted">
+                                    <Link to="/login">התחברו</Link> כדי להוסיף ביקורת
                                 </p>
                             )}
                         </section>
                     </div>
 
-                    {/* Side column */}
-                    <div className="lesson-side-col">
+                    {/* Sidebar */}
+                    <div className="col-lg-4">
+                        <div className="sticky-lg-top" style={{ top: 24 }}>
 
-                        {/* Favorite button */}
-                        <button
-                            className="btn-favorite"
-                            onClick={handleFavorite}
-                            disabled={favoriting}
-                        >
-                            ❤️ {favoriting ? 'שומר...' : 'שמירה במועדפים'}
-                        </button>
-
-                        {/* Join button */}
-                        {isParticipant ? (
-                            <button className="btn-register" disabled>
-                                ✅ רשום לשיעור
-                            </button>
-                        ) : isFull ? (
-                            <button className="btn-register" disabled>
-                                ❌ השיעור מלא
-                            </button>
-                        ) : (
                             <button
-                                className="btn-register"
-                                onClick={handleJoin}
-                                disabled={joining}
+                                className="btn btn-outline-danger w-100 mb-3 fw-bold"
+                                onClick={addFavorite}
+                                disabled={favoriting}
                             >
-                                📋 {joining ? 'נרשם...' : 'הירשם לשיעור'}
+                                ❤️ {favoriting ? 'שומר...' : 'שמירה במועדפים'}
                             </button>
-                        )}
 
-                        {/* Participants count */}
-                        <div className="participants-box">
-                            <h3>
-                                👥 משתתפים ({lesson.participants.length}/{lesson.maxParticipants})
-                            </h3>
-                            {lesson.participants.map((p) => (
-                                <div key={p._id} className="participant-item">
-                                    <span>{p.name}</span>
-                                    {p.phone ? (
-                                        <span className="participant-phone">📞 {p.phone}</span>
-                                    ) : (
-                                        <span className="participant-no-phone">ללא טלפון</span>
-                                    )}
+                            {/* Join button — conditional rendering */}
+                            {isParticipant ? (
+                                <button className="btn btn-success w-100 mb-3 fw-bold" disabled>✅ רשום לשיעור</button>
+                            ) : isFull ? (
+                                <button className="btn btn-secondary w-100 mb-3 fw-bold" disabled>❌ השיעור מלא</button>
+                            ) : (
+                                <button className="btn btn-dark w-100 mb-3 fw-bold" onClick={join} disabled={joining}>
+                                    📋 {joining ? 'נרשם...' : 'הירשם לשיעור'}
+                                </button>
+                            )}
+
+                            {/* Teacher card */}
+                            <div className="card border-0 shadow-sm text-center mb-3">
+                                <div className="card-body py-4">
+                                    <div className="fs-1 mb-2">👤</div>
+                                    <Link
+                                        to={`/teacherprofile/${lesson.creator._id}`}
+                                        className="fw-bold fs-5 text-dark text-decoration-none d-block mb-2"
+                                    >
+                                        {lesson.creator.name}
+                                    </Link>
+                                    <Link
+                                        to={`/teacherprofile/${lesson.creator._id}`}
+                                        className="small text-decoration-none"
+                                        style={{ color: '#D4A373', borderBottom: '1px dashed #D4A373' }}
+                                    >
+                                        צפה בפרופיל
+                                    </Link>
                                 </div>
-                            ))}
-                        </div>
+                            </div>
 
+                            {/* Participants list — .map() */}
+                            <div className="card border-0 shadow-sm">
+                                <div className="card-body">
+                                    <h6 className="fw-bold mb-3 text-end">
+                                        👥 משתתפים ({lesson.participants.length}/{lesson.maxParticipants})
+                                    </h6>
+                                    <ul className="list-group list-group-flush">
+                                        {lesson.participants.map(p => (
+                                            <li key={p._id} className="list-group-item d-flex justify-content-between text-end px-0">
+                                                <span className="small text-muted">{p.phone ? `📞 ${p.phone}` : ''}</span>
+                                                <span className="fw-semibold small">{p.name}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
+
                 </div>
             </main>
         </Layout>

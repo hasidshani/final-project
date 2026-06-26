@@ -14,7 +14,7 @@ import { createLessonSchema } from '../validation/lessonValidation';
 
 const router = express.Router();
 
-// Create lesson — protected + validated
+// Create lesson — protected + validated (image arrives as URL string in JSON body)
 router.post('/', authMiddleware, validate(createLessonSchema), createLesson);
 
 // Get all lessons — public

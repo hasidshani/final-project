@@ -13,23 +13,17 @@ function Login() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // If the user was redirected here from a protected page, go back there after login
+    // If redirected from a protected page, return there after login
     const from = (location.state as any)?.from?.pathname || '/dashboard';
 
     const handleSubmit = async (e: { preventDefault(): void }) => {
         e.preventDefault();
         setError('');
         setLoading(true);
-
         try {
             const { data } = await api.post('/users/login', { email, password });
-
-            // Save tokens + user into AuthContext (also stores in localStorage)
             login(data.user, data.accessToken, data.refreshToken);
-
-            // Navigate to dashboard (or the page they were trying to reach)
             navigate(from, { replace: true });
-
         } catch (err: any) {
             setError(err.response?.data?.message || 'שגיאה בשרת, נסו שוב');
         } finally {
@@ -38,68 +32,72 @@ function Login() {
     };
 
     return (
-        <div className="auth-bg">
-            <div className="login-container">
-                <div className="login-header">
-                    <div className="logo-box">✡</div>
-                    <h1 className="logo-text">אורייתא</h1>
-                    <h2>ברוכים השבים</h2>
-                    <p>היכנסו כדי להמשיך את מסע הלמידה שלכם</p>
+        <div className="min-vh-100 d-flex justify-content-center align-items-center">
+            <div style={{ width: '100%', maxWidth: '460px', padding: '20px' }}>
+
+                <div className="text-center mb-4">
+                    <div
+                        className="d-inline-flex align-items-center justify-content-center rounded-3 mb-3"
+                        style={{ width: 50, height: 50, background: '#D4A373', fontSize: '1.5rem' }}
+                    >
+                        ✡
+                    </div>
+                    <h2 className="fw-bold">ברוכים השבים</h2>
+                    <p className="text-muted">היכנסו כדי להמשיך את מסע הלמידה שלכם</p>
                 </div>
 
-                <div className="login-card">
-                    {/* Inline error message instead of alert() */}
-                    {error && (
-                        <div className="error-message">
-                            {error}
-                        </div>
-                    )}
+                <div className="card border-0 shadow-sm">
+                    <div className="card-body p-4">
+                        {error && <div className="error-message">{error}</div>}
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="input-group">
-                            <label>כתובת אימייל</label>
-                            <div className="input-wrapper">
-                                <input
-                                    type="email"
-                                    placeholder="you@example.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                                <span className="input-icon">✉️</span>
+                        <form onSubmit={handleSubmit}>
+                            <div className="mb-3 text-end">
+                                <label className="form-label fw-bold small">כתובת אימייל</label>
+                                <div className="input-icon-wrapper">
+                                    <input
+                                        type="email"
+                                        className="form-control"
+                                        placeholder="you@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                    <span className="input-icon">✉️</span>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="input-group">
-                            <label>סיסמה</label>
-                            <div className="input-wrapper">
-                                <input
-                                    type="password"
-                                    placeholder="........"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
-                                <span className="input-icon">🔒</span>
+                            <div className="mb-4 text-end">
+                                <label className="form-label fw-bold small">סיסמה</label>
+                                <div className="input-icon-wrapper">
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        placeholder="........"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
+                                    <span className="input-icon">🔒</span>
+                                </div>
                             </div>
-                        </div>
 
-                        <button
-                            type="submit"
-                            className="btn-login"
-                            disabled={loading}
-                        >
-                            {loading ? 'מתחבר...' : 'התחברו'}
-                        </button>
-                    </form>
+                            <button
+                                type="submit"
+                                className="btn btn-dark w-100 py-2 fw-bold"
+                                disabled={loading}
+                            >
+                                {loading ? 'מתחבר...' : 'התחברו'}
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
-                <div className="login-footer">
-                    <span>
-                        אין לכם חשבון?{' '}
-                        <a href="/register">הירשמו</a>
-                    </span>
-                </div>
+                <p className="text-center text-muted mt-3 small">
+                    אין לכם חשבון?{' '}
+                    <a href="/register" className="text-decoration-none fw-bold" style={{ color: '#D4A373' }}>
+                        הירשמו
+                    </a>
+                </p>
             </div>
         </div>
     );

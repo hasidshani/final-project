@@ -14,7 +14,7 @@ export const createLesson = async (
         city,
         date,
         time,
-        image
+        image = ''
     } = req.body;
 
     const userId =

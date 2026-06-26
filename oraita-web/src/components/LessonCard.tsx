@@ -13,54 +13,43 @@ type LessonCardProps = {
     image: string;
 };
 
+const FALLBACK = 'https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop';
+
 // memo prevents re-render when parent re-renders but props haven't changed
 const LessonCard = memo(function LessonCard({
-    id,
-    title,
-    teacher,
-    category,
-    city,
-    date,
-    time,
-    rating,
-    image
+    id, title, teacher, category, city, date, time, rating, image
 }: LessonCardProps) {
 
-    // Format ISO date string to readable Hebrew date
     const formattedDate = new Date(date).toLocaleDateString('he-IL', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+        year: 'numeric', month: 'long', day: 'numeric'
     });
 
     return (
-        <div className="lesson-search-card">
-
-            <div className="card-image-box">
+        <div className="card h-100 border-0 shadow-sm">
+            <div className="position-relative">
                 <img
-                    src={image || 'https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop'}
+                    src={image || FALLBACK}
                     alt={title}
-                    onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                            'https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop';
-                    }}
+                    className="card-img-top lesson-card-img"
+                    onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK; }}
                 />
-                <span className="card-tag">{category}</span>
+                <span className="lesson-badge">{category}</span>
             </div>
 
-            <div className="card-body-content">
-                <div className="card-rating">⭐ {rating > 0 ? rating.toFixed(1) : 'חדש'}</div>
-                <h3>{title}</h3>
-                <p className="teacher-name">{teacher}</p>
-                <div className="card-meta-details">
-                    <span>📍 {city}</span>
-                    <span>📅 {formattedDate} | 🕒 {time}</span>
+            <div className="card-body d-flex flex-column text-end">
+                <p className="small fw-bold text-muted mb-1">
+                    ⭐ {rating > 0 ? rating.toFixed(1) : 'חדש'}
+                </p>
+                <h5 className="card-title mb-1">{title}</h5>
+                <p className="text-muted small mb-2">{teacher}</p>
+                <div className="small text-muted border-top pt-2 mb-3">
+                    <div>📍 {city}</div>
+                    <div>📅 {formattedDate} | 🕒 {time}</div>
                 </div>
-                <Link to={`/lesson/${id}`} className="btn-details-action">
+                <Link to={`/lesson/${id}`} className="btn btn-outline-dark btn-sm mt-auto">
                     לפרטים נוספים
                 </Link>
             </div>
-
         </div>
     );
 });
