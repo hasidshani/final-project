@@ -1,23 +1,12 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
 
 const router = express.Router();
 
-const base = (process.env.SERVER_URL || 'http://localhost:3000') + '/';
-
-const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => {
-        cb(null, 'public/');
-    },
-    filename: (_req, file, cb) => {
-        const ext = file.originalname.split('.').filter(Boolean).slice(1).join('.');
-        cb(null, `${Date.now()}.${ext}`);
-    }
-});
-
 const upload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
         const allowed = /jpeg|jpg|png|gif|webp/;
@@ -27,14 +16,30 @@ const upload = multer({
     }
 });
 
-router.post('/', upload.single('file'), (req: Request, res: Response) => {
+router.post('/', upload.single('file'), async (req: Request, res: Response) => {
     if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
     }
-    const filePath = req.file.path.replace(/\\/g, '/');
-    const url = base + filePath;
-    console.log('File uploaded:', url);
-    return res.status(200).json({ url });
+
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            { folder: 'oraita' },
+            (error, uploadResult) => {
+                if (error || !uploadResult) reject(error ?? new Error('Upload failed'));
+                else resolve(uploadResult);
+            }
+        );
+        stream.end(req.file!.buffer);
+    });
+
+    console.log('Cloudinary upload:', result.secure_url);
+    return res.status(200).json({ url: result.secure_url });
 });
 
 export default router;

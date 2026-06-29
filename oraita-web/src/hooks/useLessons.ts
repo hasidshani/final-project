@@ -21,7 +21,9 @@ export function useLessons() {
     const filtered = useMemo(() => {
         const now = new Date();
         return list.filter(lesson => {
-            if (new Date(`${lesson.date}T${lesson.time}`) <= now) return false;
+            // date from MongoDB is a full ISO string; extract YYYY-MM-DD before combining with time
+            const dateStr = lesson.date.split('T')[0];
+            if (new Date(`${dateStr}T${lesson.time}`) <= now) return false;
             const matchesCategory = !categoryFilter || lesson.category === categoryFilter;
             const matchesCity     = !cityFilter     || lesson.city     === cityFilter;
             return matchesCategory && matchesCity;

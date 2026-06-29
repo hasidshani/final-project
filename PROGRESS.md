@@ -143,6 +143,7 @@ Base URL: `http://localhost:3000/api`
 | POST | `/login` | ❌ | Login → returns accessToken + refreshToken |
 | POST | `/logout` | ❌ | Invalidate refresh token |
 | POST | `/refresh` | ❌ | Get new access token |
+| POST | `/google` | ❌ | Google Sign-In — verifies credential, finds/creates user, returns tokens |
 | POST | `/favorites/:lessonId` | ✅ | Add lesson to favorites |
 | DELETE | `/favorites/:lessonId` | ✅ | Remove lesson from favorites |
 
@@ -237,7 +238,7 @@ VITE_API_URL=http://localhost:3000/api
 
 ## Current State
 
-### ✅ Everything Working
+### ✅ Everything Working (as of 2026-06-29)
 - Register → Login → Dashboard flow (auth persists on refresh via `/api/users/me`)
 - Protected routes redirect to /login, return to intended page after login
 - Navbar: shows user name + logout when logged in, login link when logged out
@@ -257,6 +258,9 @@ VITE_API_URL=http://localhost:3000/api
 - `.map()` used throughout for all lists (categories, cities, tabs, lessons, comments, fields)
 - Image upload working: `public/` folder served with correct CORP headers
 - README.md written with all required sections
+- **Google Login** — `POST /api/users/google`, `<GoogleLogin>` button on Login page, find-or-create user flow
+- Homepage city counts are live from DB (no longer hardcoded)
+- Date parsing bug fixed in `useLessons` + `useTeacherProfile` (MongoDB ISO date → `split('T')[0]`)
 
 ### ⚠ Still To Do (manual steps only)
 1. **Deploy** — MongoDB Atlas → Render (backend) → Vercel (frontend). See deployment guide below.
@@ -397,6 +401,40 @@ VITE_API_URL=http://localhost:3000/api
   - `useComments` — comments list + addComment
   - `useTeacherProfile` — teacher's future lessons + avgRating + cities
 - ✅ All pages refactored: pages contain only JSX, all logic lives in hooks
+
+### Session 5 (2026-06-29) — Cleanup + Live City Counts + Google Login
+
+#### Cleanup
+- ✅ Deleted `client/` folder (old HTML prototype, fully replaced by `oraita-web/`)
+
+#### Live City Counts (HomePage)
+- ✅ `HomePage.tsx` — city lesson counts are now live from the Redux store (were hardcoded: 45 / 18)
+  - `fetchLessons()` dispatched on mount, `useSelector` reads `state.lessons.list`
+  - Counts reflect all lessons per city, recomputed via `useMemo` when lessons change
+  - Now correctly shows real counts (e.g. Netanya: 1, Pardes Hanna: 2)
+
+#### Date Parsing Bug Fix
+- ✅ Found root cause: MongoDB returns dates as full ISO strings (`"2026-06-25T00:00:00.000Z"`)
+  - Concatenating with time produced invalid date `"2026-06-25T00:00:00.000ZT21:00"`
+  - `Invalid Date > now` is always `false` → all lessons were being filtered out silently
+- ✅ Fixed in `hooks/useLessons.ts` — `lesson.date.split('T')[0]` extracts `YYYY-MM-DD` before combining with time → past-lesson filter now actually works in AllLessons
+- ✅ Fixed in `hooks/useTeacherProfile.ts` — same fix → TeacherProfile now correctly shows future lessons only
+
+#### Google Login (Lecturer's Approach)
+- ✅ Installed `google-auth-library` (backend) and `@react-oauth/google` (frontend)
+- ✅ Created Google Cloud project + OAuth 2.0 Client ID (authorized origins: `http://localhost:5173`, `http://localhost`)
+- ✅ `server/controllers/userController.ts` — added `googleSignin`:
+  - Verifies Google credential with `OAuth2Client.verifyIdToken()`
+  - Finds existing user by email OR creates new user (`name` from payload, `password: 'google-signin'`)
+  - Generates app's own access + refresh tokens (same `generateTokens` used by regular login)
+  - Returns `{ accessToken, refreshToken, user }` — same shape as regular login
+- ✅ `server/routes/users_routes.ts` — added `POST /api/users/google`
+- ✅ `oraita-web/src/main.tsx` — wrapped app with `<GoogleOAuthProvider clientId={VITE_GOOGLE_CLIENT_ID}>`
+- ✅ `oraita-web/src/pages/Login.tsx` — added `handleGoogleSuccess` + `<GoogleLogin>` button (below form, separated by "או" divider)
+- ✅ `server/.env` — added `GOOGLE_CLIENT_ID`
+- ✅ `oraita-web/.env` — added `VITE_GOOGLE_CLIENT_ID`
+- ✅ Both `.env.example` files updated with placeholder keys
+- ✅ API verified: `POST /api/users/google` with empty body → 400 `Missing credential`; with fake token → 400 `Google authentication failed`
 
 ### Session 4 (2026-06-26) — Image Upload (Lecturer's Approach)
 - ✅ Created `server/routes/file_routes.ts` — dedicated upload endpoint

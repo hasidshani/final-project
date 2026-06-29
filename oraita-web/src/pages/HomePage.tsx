@@ -1,13 +1,13 @@
+import { useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { useDispatch } from 'react-redux';
-import type { AppDispatch } from '../store/store';
-import { setCategoryFilter } from '../store/lessonsSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../store/store';
+import { fetchLessons, setCategoryFilter } from '../store/lessonsSlice';
 
-// Data arrays — rendered with .map() to avoid copy-paste
-const CITIES = [
-    { name: 'נתניה',     emoji: '🏙️', count: '45 שיעורים' },
-    { name: 'פרדס חנה', emoji: '🌳', count: '18 שיעורים' },
+const CITY_META: { name: string; emoji: string }[] = [
+    { name: 'נתניה',     emoji: '🏙️' },
+    { name: 'פרדס חנה', emoji: '🌳' },
 ];
 
 const CATEGORIES = [
@@ -22,6 +22,19 @@ const CATEGORIES = [
 function Home() {
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
+    const lessons = useSelector((state: RootState) => state.lessons.list);
+
+    useEffect(() => {
+        dispatch(fetchLessons());
+    }, [dispatch]);
+
+    const CITIES = useMemo(
+        () => CITY_META.map(city => ({
+            ...city,
+            count: lessons.filter(l => l.city === city.name).length,
+        })),
+        [lessons]
+    );
 
     const handleCategoryClick = (cat: string) => {
         dispatch(setCategoryFilter(cat));
@@ -74,7 +87,7 @@ function Home() {
                                         <div className="card-body py-4 text-center">
                                             <div className="fs-1 mb-2">{city.emoji}</div>
                                             <h4 className="fw-bold mb-1 text-dark">{city.name}</h4>
-                                            <span className="text-muted small">{city.count}</span>
+                                            <span className="text-muted small">{city.count} שיעורים</span>
                                         </div>
                                     </div>
                                 </Link>

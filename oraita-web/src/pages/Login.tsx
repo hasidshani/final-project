@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
+import type { CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -15,6 +17,22 @@ function Login() {
 
     // If redirected from a protected page, return there after login
     const from = (location.state as any)?.from?.pathname || '/dashboard';
+
+    const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+        setError('');
+        setLoading(true);
+        try {
+            const { data } = await api.post('/users/google', {
+                credential: credentialResponse.credential,
+            });
+            login(data.user, data.accessToken, data.refreshToken);
+            navigate(from, { replace: true });
+        } catch {
+            setError('שגיאה בהתחברות עם גוגל, נסו שוב');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSubmit = async (e: { preventDefault(): void }) => {
         e.preventDefault();
@@ -89,6 +107,19 @@ function Login() {
                                 {loading ? 'מתחבר...' : 'התחברו'}
                             </button>
                         </form>
+
+                        <div className="d-flex align-items-center my-3">
+                            <hr className="flex-grow-1" />
+                            <span className="mx-2 text-muted small">או</span>
+                            <hr className="flex-grow-1" />
+                        </div>
+
+                        <div className="d-flex justify-content-center">
+                            <GoogleLogin
+                                onSuccess={handleGoogleSuccess}
+                                onError={() => setError('שגיאה בהתחברות עם גוגל')}
+                            />
+                        </div>
                     </div>
                 </div>
 

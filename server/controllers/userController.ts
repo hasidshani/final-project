@@ -6,6 +6,9 @@ import {
 import User from '../models/users';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
+
+const googleClient = new OAuth2Client();
 
 // JWT payload type
 type TokenPayload = {
@@ -518,6 +521,51 @@ export const addFavorite = async (
                     ? error.message
                     : 'Unknown error'
         });
+    }
+};
+
+// Google Sign-In
+export const googleSignin = async (req: Request, res: Response) => {
+    const credential = req.body.credential;
+    if (!credential) {
+        return res.status(400).json({ success: false, message: 'Missing credential' });
+    }
+    try {
+        const ticket = await googleClient.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });o
+        const payload = ticket.getPayload();
+        if (!payload?.email) {
+            return res.status(400).json({ success: false, message: 'Invalid Google token' });
+        }
+
+        let user = await User.findOne({ email: payload.email });
+        if (!user) {
+            user = await User.create({
+                email: payload.email,
+                name: payload.name ?? payload.email,
+                password: 'google-signin',
+            });
+        }
+
+        const tokens = generateTokens(user._id.toString());
+        if (!tokens) {
+            return res.status(500).json({ success: false, message: 'Token generation failed' });
+        }
+
+        if (!user.refreshTokens) user.refreshTokens = [];
+        user.refreshTokens.push(tokens.refreshToken);
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            user: { _id: user._id, name: user.name, email: user.email },
+        });
+    } catch (err) {
+        return res.status(400).json({ success: false, message: 'Google authentication failed' });
     }
 };
 

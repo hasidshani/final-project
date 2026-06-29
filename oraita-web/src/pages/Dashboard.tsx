@@ -19,7 +19,7 @@ const formatDate = (dateStr: string) =>
         day: 'numeric', month: 'long', year: 'numeric'
     });
 
-function LessonRow({ lesson }: { lesson: Lesson }) {
+function LessonRow({ lesson, onDelete }: { lesson: Lesson; onDelete?: (id: string) => void }) {
     return (
         <div className="d-flex justify-content-between align-items-center py-3 border-bottom text-end">
             <div>
@@ -32,16 +32,26 @@ function LessonRow({ lesson }: { lesson: Lesson }) {
                     <span>📍 {lesson.city}</span>
                 </div>
             </div>
-            <Link to={`/lesson/${lesson._id}`} className="btn btn-dark btn-sm text-decoration-none">
-                צפה בשיעור
-            </Link>
+            <div className="d-flex gap-2">
+                <Link to={`/lesson/${lesson._id}`} className="btn btn-dark btn-sm text-decoration-none">
+                    צפה בשיעור
+                </Link>
+                {onDelete && (
+                    <button
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => onDelete(lesson._id)}
+                    >
+                        🗑️ מחק
+                    </button>
+                )}
+            </div>
         </div>
     );
 }
 
 function Dashboard() {
     const { user } = useAuth();
-    const { loading, error, joinedLessons, createdLessons, favoriteLessons } = useDashboard();
+    const { loading, error, joinedLessons, createdLessons, favoriteLessons, deleteLesson } = useDashboard();
     const [activeTab, setActiveTab] = useState<Tab>('joined');
 
     const counts: Record<Tab, number> = {
@@ -107,7 +117,11 @@ function Dashboard() {
                             <p className="text-center text-muted py-3">אין שיעורים להצגה</p>
                         ) : (
                             displayedLessons.map(lesson => (
-                                <LessonRow key={lesson._id} lesson={lesson} />
+                                <LessonRow
+                                    key={lesson._id}
+                                    lesson={lesson}
+                                    onDelete={activeTab === 'created' ? deleteLesson : undefined}
+                                />
                             ))
                         )}
                     </div>

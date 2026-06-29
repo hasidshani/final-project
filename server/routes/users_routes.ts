@@ -7,7 +7,8 @@ import {
     refresh,
     getMe,
     addFavorite,
-    removeFavorite
+    removeFavorite,
+    googleSignin
 } from '../controllers/userController';
 
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -31,6 +32,9 @@ router.post('/logout', logout);
 
 // Refresh token
 router.post('/refresh', refresh);
+
+// Google Sign-In
+router.post('/google', googleSignin);
 
 // Add lesson to favorites
 router.post('/favorites/:lessonId', authMiddleware, addFavorite);

@@ -39,5 +39,10 @@ export function useDashboard() {
         [lessons, favoriteIds]
     );
 
-    return { loading, error, joinedLessons, createdLessons, favoriteLessons };
+    const deleteLesson = async (id: string) => {
+        await api.delete(`/lessons/${id}`);
+        setLessons(prev => prev.filter(l => l._id !== id));
+    };
+
+    return { loading, error, joinedLessons, createdLessons, favoriteLessons, deleteLesson };
 }

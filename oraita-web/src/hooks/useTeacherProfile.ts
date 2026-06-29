@@ -18,10 +18,11 @@ export function useTeacherProfile(teacherId: string | undefined) {
                 const all: Lesson[] = res.data.lessons ?? [];
                 const now = new Date();
                 setLessons(
-                    all.filter(l =>
-                        l.creator._id === teacherId &&
-                        new Date(`${l.date}T${l.time}`) > now
-                    )
+                    all.filter(l => {
+                        const dateStr = l.date.split('T')[0];
+                        return l.creator._id === teacherId &&
+                            new Date(`${dateStr}T${l.time}`) > now;
+                    })
                 );
             })
             .catch(() => setError('שגיאה בטעינת הנתונים'))
