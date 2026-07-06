@@ -33,8 +33,11 @@ export interface ILesson extends Document {
     // Maximum participants
     maxParticipants: number;
 
-    // Lesson rating
+    // Average rating (0-5)
     rating: number;
+
+    // Individual ratings from participants
+    ratings: Array<{ user: mongoose.Types.ObjectId; value: number }>;
 }
 
 // Lesson schema
@@ -120,7 +123,13 @@ const lessonSchema = new Schema<ILesson>({
         default: 0,
         min: 0,
         max: 5
-    }
+    },
+
+    // Individual ratings from participants
+    ratings: [{
+        user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        value: { type: Number, required: true, min: 1, max: 5 }
+    }]
 
 }, {
 

@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../store/store';
 import { fetchLessons, setCategoryFilter } from '../store/lessonsSlice';
+import { isLessonUpcoming } from '../utils/lessonDate';
 
 const CITY_META: { name: string; emoji: string }[] = [
     { name: 'נתניה',     emoji: '🏙️' },
@@ -31,7 +32,7 @@ function Home() {
     const CITIES = useMemo(
         () => CITY_META.map(city => ({
             ...city,
-            count: lessons.filter(l => l.city === city.name).length,
+            count: lessons.filter(l => l.city === city.name && isLessonUpcoming(l)).length,
         })),
         [lessons]
     );

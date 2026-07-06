@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import type { Lesson } from '../store/lessonsSlice';
+import { isLessonUpcoming } from '../utils/lessonDate';
 
 /**
  * Fetches all dashboard data for the logged-in user:
@@ -27,16 +28,28 @@ export function useDashboard() {
     }, []);
 
     const joinedLessons = useMemo(
-        () => lessons.filter(l => user && l.participants.includes(user._id)),
+        () => lessons.filter(l => user && l.participants.includes(user._id) && isLessonUpcoming(l)),
         [lessons, user]
     );
     const createdLessons = useMemo(
-        () => lessons.filter(l => user && l.creator._id === user._id),
+        () => lessons.filter(l => user && l.creator._id === user._id && isLessonUpcoming(l)),
         [lessons, user]
     );
     const favoriteLessons = useMemo(
-        () => lessons.filter(l => favoriteIds.includes(l._id)),
+        () => lessons.filter(l => favoriteIds.includes(l._id) && isLessonUpcoming(l)),
         [lessons, favoriteIds]
+    );
+
+    // Past lessons the user is connected to (created or joined) — shown separately,
+    // deletable one-by-one instead of being silently hidden or auto-purged.
+    const pastLessons = useMemo(
+        () => lessons
+            .filter(l => user &&
+                (l.creator._id === user._id || l.participants.includes(user._id)) &&
+                !isLessonUpcoming(l)
+            )
+            .sort((a, b) => b.date.localeCompare(a.date)),
+        [lessons, user]
     );
 
     const deleteLesson = async (id: string) => {
@@ -44,5 +57,16 @@ export function useDashboard() {
         setLessons(prev => prev.filter(l => l._id !== id));
     };
 
-    return { loading, error, joinedLessons, createdLessons, favoriteLessons, deleteLesson };
+    const leaveLesson = async (id: string) => {
+        await api.delete(`/lessons/${id}/join`);
+        setLessons(prev =>
+            prev.map(l =>
+                l._id === id
+                    ? { ...l, participants: l.participants.filter(p => p !== user?._id) }
+                    : l
+            )
+        );
+    };
+
+    return { loading, error, joinedLessons, createdLessons, favoriteLessons, pastLessons, deleteLesson, leaveLesson };
 }

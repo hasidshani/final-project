@@ -6,12 +6,13 @@ import { useAuth } from '../context/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
 import type { Lesson } from '../store/lessonsSlice';
 
-type Tab = 'joined' | 'created' | 'favorites';
+type Tab = 'joined' | 'created' | 'favorites' | 'past';
 
 const TABS: { key: Tab; label: string }[] = [
     { key: 'joined',    label: 'שיעורים שנרשמתי' },
     { key: 'created',   label: 'השיעורים שלי' },
     { key: 'favorites', label: 'שמורים' },
+    { key: 'past',      label: 'שיעורים שעברו' },
 ];
 
 const formatDate = (dateStr: string) =>
@@ -19,7 +20,15 @@ const formatDate = (dateStr: string) =>
         day: 'numeric', month: 'long', year: 'numeric'
     });
 
-function LessonRow({ lesson, onDelete }: { lesson: Lesson; onDelete?: (id: string) => void }) {
+function LessonRow({ lesson, onDelete, onLeave }: { lesson: Lesson; onDelete?: (id: string) => void; onLeave?: (id: string) => void }) {
+    const [confirming, setConfirming] = useState(false);
+
+    const action = onDelete ?? onLeave;
+    const confirmQuestion = onDelete ? 'האם אתה בטוח שברצונך למחוק?' : 'האם אתה בטוח שברצונך לבטל את ההרשמה?';
+    const confirmLabel = onDelete ? 'כן, מחק' : 'כן, בטל הרשמה';
+    const triggerLabel = onDelete ? '🗑️ מחק' : '✋ בטל הרשמה';
+    const triggerClass = onDelete ? 'btn-outline-danger' : 'btn-outline-warning';
+
     return (
         <div className="d-flex justify-content-between align-items-center py-3 border-bottom text-end">
             <div>
@@ -32,17 +41,35 @@ function LessonRow({ lesson, onDelete }: { lesson: Lesson; onDelete?: (id: strin
                     <span>📍 {lesson.city}</span>
                 </div>
             </div>
-            <div className="d-flex gap-2">
+            <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
                 <Link to={`/lesson/${lesson._id}`} className="btn btn-dark btn-sm text-decoration-none">
                     צפה בשיעור
                 </Link>
-                {onDelete && (
-                    <button
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={() => onDelete(lesson._id)}
-                    >
-                        🗑️ מחק
-                    </button>
+                {action && (
+                    confirming ? (
+                        <>
+                            <span className="small text-danger fw-semibold">{confirmQuestion}</span>
+                            <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => { action(lesson._id); setConfirming(false); }}
+                            >
+                                {confirmLabel}
+                            </button>
+                            <button
+                                className="btn btn-outline-secondary btn-sm"
+                                onClick={() => setConfirming(false)}
+                            >
+                                ביטול
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            className={`btn btn-sm ${triggerClass}`}
+                            onClick={() => setConfirming(true)}
+                        >
+                            {triggerLabel}
+                        </button>
+                    )
                 )}
             </div>
         </div>
@@ -51,19 +78,21 @@ function LessonRow({ lesson, onDelete }: { lesson: Lesson; onDelete?: (id: strin
 
 function Dashboard() {
     const { user } = useAuth();
-    const { loading, error, joinedLessons, createdLessons, favoriteLessons, deleteLesson } = useDashboard();
+    const { loading, error, joinedLessons, createdLessons, favoriteLessons, pastLessons, deleteLesson, leaveLesson } = useDashboard();
     const [activeTab, setActiveTab] = useState<Tab>('joined');
 
     const counts: Record<Tab, number> = {
         joined:    joinedLessons.length,
         created:   createdLessons.length,
         favorites: favoriteLessons.length,
+        past:      pastLessons.length,
     };
 
     const displayedLessons =
-        activeTab === 'joined'  ? joinedLessons :
-        activeTab === 'created' ? createdLessons :
-                                  favoriteLessons;
+        activeTab === 'joined'    ? joinedLessons :
+        activeTab === 'created'   ? createdLessons :
+        activeTab === 'favorites' ? favoriteLessons :
+                                    pastLessons;
 
     if (loading) return <Layout><p className="text-center mt-5">טוען...</p></Layout>;
     if (error)   return <Layout><p className="text-center mt-5 text-danger">{error}</p></Layout>;
@@ -116,13 +145,18 @@ function Dashboard() {
                         {displayedLessons.length === 0 ? (
                             <p className="text-center text-muted py-3">אין שיעורים להצגה</p>
                         ) : (
-                            displayedLessons.map(lesson => (
-                                <LessonRow
-                                    key={lesson._id}
-                                    lesson={lesson}
-                                    onDelete={activeTab === 'created' ? deleteLesson : undefined}
-                                />
-                            ))
+                            displayedLessons.map(lesson => {
+                                const isOwner = lesson.creator._id === user?._id;
+                                const canDelete = activeTab === 'created' || (activeTab === 'past' && isOwner);
+                                return (
+                                    <LessonRow
+                                        key={lesson._id}
+                                        lesson={lesson}
+                                        onDelete={canDelete ? deleteLesson : undefined}
+                                        onLeave={activeTab === 'joined' ? leaveLesson : undefined}
+                                    />
+                                );
+                            })
                         )}
                     </div>
                 </div>

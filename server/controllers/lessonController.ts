@@ -251,6 +251,158 @@ export const joinLesson = async (
 };
 
 
+// Leave lesson (cancel registration)
+export const leaveLesson = async (
+    req: Request,
+    res: Response
+) => {
+
+    const lessonId =
+        req.params.id;
+
+    const userId =
+        req.userId as string;
+
+    try {
+
+        const lesson =
+            await Lesson.findById(
+                lessonId
+            );
+
+        if (!lesson) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    'Lesson not found'
+            });
+        }
+
+        const isParticipant =
+            lesson.participants.some(
+                (participant) =>
+                    participant.toString() ===
+                    userId
+            );
+
+        if (!isParticipant) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    'You are not registered for this lesson'
+            });
+        }
+
+        lesson.participants =
+            lesson.participants.filter(
+                (participant) =>
+                    participant.toString() !==
+                    userId
+            );
+
+        await lesson.save();
+
+        return res.status(200).json({
+            success: true,
+            message:
+                'Registration cancelled successfully'
+        });
+
+    } catch (error) {
+
+        return res.status(400).json({
+            success: false,
+            message:
+                error instanceof Error
+                    ? error.message
+                    : 'Unknown error'
+        });
+
+    }
+};
+
+
+// Rate lesson (participants only, after lesson date has passed)
+export const rateLesson = async (
+    req: Request,
+    res: Response
+) => {
+
+    const lessonId = req.params.id;
+    const userId   = req.userId as string;
+    const { value } = req.body;
+
+    const numValue = Number(value);
+    if (!numValue || numValue < 1 || numValue > 5) {
+        return res.status(400).json({
+            success: false,
+            message: 'Rating must be between 1 and 5'
+        });
+    }
+
+    try {
+
+        const lesson = await Lesson.findById(lessonId);
+
+        if (!lesson) {
+            return res.status(404).json({
+                success: false,
+                message: 'Lesson not found'
+            });
+        }
+
+        // Only allow rating after the lesson date has passed
+        if (new Date(lesson.date) > new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot rate a lesson that has not taken place yet'
+            });
+        }
+
+        // Only participants can rate
+        const isParticipant = lesson.participants.some(
+            p => p.toString() === userId
+        );
+        if (!isParticipant) {
+            return res.status(403).json({
+                success: false,
+                message: 'Only participants can rate this lesson'
+            });
+        }
+
+        // Update existing rating or add new one
+        const existingIdx = lesson.ratings.findIndex(
+            r => r.user.toString() === userId
+        );
+        if (existingIdx >= 0) {
+            lesson.ratings[existingIdx].value = numValue;
+        } else {
+            lesson.ratings.push({ user: userId as any, value: numValue });
+        }
+
+        // Recompute average
+        const avg = lesson.ratings.reduce((sum, r) => sum + r.value, 0) / lesson.ratings.length;
+        lesson.rating = Math.round(avg * 10) / 10;
+
+        await lesson.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Rating saved',
+            rating: lesson.rating
+        });
+
+    } catch (error) {
+
+        return res.status(400).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+
+    }
+};
+
+
 // Delete lesson
 export const deleteLesson = async (
     req: Request,

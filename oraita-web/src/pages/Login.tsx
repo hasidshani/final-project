@@ -11,7 +11,13 @@ function Login() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const { login } = useAuth();
+    // Post-Google-login "add a phone number?" prompt state
+    const [phonePrompt, setPhonePrompt] = useState<'ask' | 'input' | null>(null);
+    const [phone, setPhone] = useState('');
+    const [phoneError, setPhoneError] = useState('');
+    const [phoneSaving, setPhoneSaving] = useState(false);
+
+    const { login, updateUser } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -26,11 +32,31 @@ function Login() {
                 credential: credentialResponse.credential,
             });
             login(data.user, data.accessToken, data.refreshToken);
-            navigate(from, { replace: true });
+
+            if (!data.user.phone) {
+                setPhonePrompt('ask');
+            } else {
+                navigate(from, { replace: true });
+            }
         } catch {
             setError('שגיאה בהתחברות עם גוגל, נסו שוב');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSavePhone = async (e: { preventDefault(): void }) => {
+        e.preventDefault();
+        setPhoneError('');
+        setPhoneSaving(true);
+        try {
+            await api.patch('/users/phone', { phone });
+            updateUser({ phone });
+            navigate(from, { replace: true });
+        } catch {
+            setPhoneError('שגיאה בשמירת מספר הטלפון, נסו שוב');
+        } finally {
+            setPhoneSaving(false);
         }
     };
 
@@ -66,6 +92,70 @@ function Login() {
 
                 <div className="card border-0 shadow-sm">
                     <div className="card-body p-4">
+                        {phonePrompt === 'ask' && (
+                            <div className="text-center">
+                                <p className="fw-bold mb-3">התחברתם בהצלחה! 🎉</p>
+                                <p className="text-muted mb-4">
+                                    האם תרצו להוסיף מספר טלפון לחשבון שלכם? (אופציונלי)
+                                </p>
+                                <div className="d-flex gap-2">
+                                    <button
+                                        type="button"
+                                        className="btn btn-dark flex-fill py-2 fw-bold"
+                                        onClick={() => setPhonePrompt('input')}
+                                    >
+                                        כן, אוסיף
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-secondary flex-fill py-2 fw-bold"
+                                        onClick={() => navigate(from, { replace: true })}
+                                    >
+                                        לא תודה
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {phonePrompt === 'input' && (
+                            <form onSubmit={handleSavePhone}>
+                                <p className="fw-bold mb-3 text-center">מה מספר הטלפון שלכם?</p>
+                                {phoneError && <div className="error-message">{phoneError}</div>}
+                                <div className="mb-4 text-end">
+                                    <label className="form-label fw-bold small">מספר טלפון</label>
+                                    <div className="input-icon-wrapper">
+                                        <input
+                                            type="tel"
+                                            className="form-control"
+                                            placeholder="050-123-4567"
+                                            value={phone}
+                                            onChange={(e) => setPhone(e.target.value)}
+                                            required
+                                        />
+                                        <span className="input-icon">📞</span>
+                                    </div>
+                                </div>
+                                <div className="d-flex gap-2">
+                                    <button
+                                        type="submit"
+                                        className="btn btn-dark flex-fill py-2 fw-bold"
+                                        disabled={phoneSaving}
+                                    >
+                                        {phoneSaving ? 'שומר...' : 'שמור והמשך'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-secondary flex-fill py-2 fw-bold"
+                                        onClick={() => navigate(from, { replace: true })}
+                                    >
+                                        דלג
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        {!phonePrompt && (
+                        <>
                         {error && <div className="error-message">{error}</div>}
 
                         <form onSubmit={handleSubmit}>
@@ -120,6 +210,8 @@ function Login() {
                                 onError={() => setError('שגיאה בהתחברות עם גוגל')}
                             />
                         </div>
+                        </>
+                        )}
                     </div>
                 </div>
 

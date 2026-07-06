@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import type { Lesson } from '../store/lessonsSlice';
+import { isLessonUpcoming } from '../utils/lessonDate';
 
 /**
  * Fetches all future lessons for a specific teacher.
@@ -16,13 +17,8 @@ export function useTeacherProfile(teacherId: string | undefined) {
         api.get('/lessons')
             .then(res => {
                 const all: Lesson[] = res.data.lessons ?? [];
-                const now = new Date();
                 setLessons(
-                    all.filter(l => {
-                        const dateStr = l.date.split('T')[0];
-                        return l.creator._id === teacherId &&
-                            new Date(`${dateStr}T${l.time}`) > now;
-                    })
+                    all.filter(l => l.creator._id === teacherId && isLessonUpcoming(l))
                 );
             })
             .catch(() => setError('שגיאה בטעינת הנתונים'))

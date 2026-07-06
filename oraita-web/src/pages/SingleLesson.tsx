@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import CommentCard from '../components/CommentCard';
@@ -10,12 +11,13 @@ const FALLBACK_IMG = 'https://images.unsplash.com/photo-1544923246-77307dd654ca?
 function SingleLesson() {
     const { id } = useParams<{ id: string }>();
     const { user } = useAuth();
+    const [confirmingLeave, setConfirmingLeave] = useState(false);
 
     const {
         lesson, loading, error,
-        actionMsg, joining, favoriting,
-        join, addFavorite,
-        isParticipant, isFull,
+        actionMsg, joining, leaving, favoriting, rating,
+        join, leave, toggleFavorite, isFavorited, rateLesson,
+        isParticipant, isFull, isPast, userRating,
     } = useSingleLesson(id);
 
     const { comments, commentText, setCommentText, commentError, addComment } = useComments(id);
@@ -65,6 +67,39 @@ function SingleLesson() {
                                 ⭐ {lesson.rating > 0 ? lesson.rating.toFixed(1) : 'אין דירוג עדיין'}
                             </span>
                         </div>
+
+                        {/* Star rating — shown only to participants after the lesson has passed */}
+                        {isPast && isParticipant && (
+                            <div className="card border-0 shadow-sm p-4 mb-4 text-end">
+                                <h5 className="fw-bold mb-2">
+                                    {userRating > 0 ? 'הדירוג שלך' : 'דרגו את השיעור'}
+                                </h5>
+                                <p className="text-muted small mb-3">
+                                    {userRating > 0 ? 'לחצו על כוכב אחר כדי לשנות את הדירוג' : 'בחרו מ-1 עד 5 כוכבים'}
+                                </p>
+                                <div className="d-flex gap-1 justify-content-end" style={{ direction: 'ltr' }}>
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                        <button
+                                            key={star}
+                                            onClick={() => rateLesson(star)}
+                                            disabled={rating}
+                                            style={{
+                                                fontSize: '2rem',
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: rating ? 'default' : 'pointer',
+                                                padding: '0 2px',
+                                                color: star <= userRating ? '#D4A373' : '#ccc',
+                                                transition: 'color 0.15s'
+                                            }}
+                                            title={`${star} כוכבים`}
+                                        >
+                                            ★
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {actionMsg && (
                             <div className="alert alert-success text-end">{actionMsg}</div>
@@ -121,16 +156,41 @@ function SingleLesson() {
                         <div className="sticky-lg-top" style={{ top: 24 }}>
 
                             <button
-                                className="btn btn-outline-danger w-100 mb-3 fw-bold"
-                                onClick={addFavorite}
+                                className={`btn w-100 mb-3 fw-bold ${isFavorited ? 'btn-danger' : 'btn-outline-danger'}`}
+                                style={{ transition: 'background-color 0.15s, color 0.15s' }}
+                                onClick={toggleFavorite}
                                 disabled={favoriting}
                             >
-                                ❤️ {favoriting ? 'שומר...' : 'שמירה במועדפים'}
+                                {isFavorited ? '💔' : '❤️'}{' '}
+                                {favoriting ? 'שומר...' : isFavorited ? 'הסרה מהמועדפים' : 'שמירה במועדפים'}
                             </button>
 
-                            {/* Join button — conditional rendering */}
+                            {/* Join / cancel button — conditional rendering */}
                             {isParticipant ? (
-                                <button className="btn btn-success w-100 mb-3 fw-bold" disabled>✅ רשום לשיעור</button>
+                                confirmingLeave ? (
+                                    <div className="d-flex gap-2 mb-3">
+                                        <button
+                                            className="btn btn-danger flex-fill fw-bold"
+                                            onClick={() => { leave(); setConfirmingLeave(false); }}
+                                            disabled={leaving}
+                                        >
+                                            {leaving ? 'מבטל...' : 'כן, בטל הרשמה'}
+                                        </button>
+                                        <button
+                                            className="btn btn-outline-secondary flex-fill fw-bold"
+                                            onClick={() => setConfirmingLeave(false)}
+                                        >
+                                            חזרה
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        className="btn btn-outline-success w-100 mb-3 fw-bold"
+                                        onClick={() => setConfirmingLeave(true)}
+                                    >
+                                        ✅ רשום לשיעור — לחצו לביטול
+                                    </button>
+                                )
                             ) : isFull ? (
                                 <button className="btn btn-secondary w-100 mb-3 fw-bold" disabled>❌ השיעור מלא</button>
                             ) : (

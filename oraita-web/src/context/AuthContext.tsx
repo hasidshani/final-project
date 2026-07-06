@@ -7,6 +7,8 @@ interface AuthUser {
     _id: string;
     name: string;
     email: string;
+    phone?: string;
+    favorites?: string[];
 }
 
 interface AuthContextType {
@@ -14,6 +16,7 @@ interface AuthContextType {
     loading: boolean;
     login: (userData: AuthUser, accessToken: string, refreshToken: string) => void;
     logout: () => void;
+    updateUser: (updates: Partial<AuthUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -44,6 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
     };
 
+    const updateUser = (updates: Partial<AuthUser>) => {
+        setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+    };
+
     const logout = async () => {
         const refreshToken = localStorage.getItem('refreshToken');
         try {
@@ -60,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

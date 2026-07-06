@@ -197,7 +197,8 @@ export const loginUser = async (
             user: {
                 _id: user._id,
                 name: user.name,
-                email: user.email
+                email: user.email,
+                favorites: user.favorites
             }
         });
     } catch (error) {
@@ -534,7 +535,7 @@ export const googleSignin = async (req: Request, res: Response) => {
         const ticket = await googleClient.verifyIdToken({
             idToken: credential,
             audience: process.env.GOOGLE_CLIENT_ID,
-        });o
+        });
         const payload = ticket.getPayload();
         if (!payload?.email) {
             return res.status(400).json({ success: false, message: 'Invalid Google token' });
@@ -562,10 +563,37 @@ export const googleSignin = async (req: Request, res: Response) => {
             success: true,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            user: { _id: user._id, name: user.name, email: user.email },
+            user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, favorites: user.favorites },
         });
     } catch (err) {
         return res.status(400).json({ success: false, message: 'Google authentication failed' });
+    }
+};
+
+// Update the logged-in user's phone number (used by the "add phone" prompt after Google login)
+export const updatePhone = async (req: Request, res: Response) => {
+    const userId = req.userId as string;
+    const { phone } = req.body;
+
+    try {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        user.phone = phone;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            user: { _id: user._id, name: user.name, email: user.email, phone: user.phone },
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 };
 

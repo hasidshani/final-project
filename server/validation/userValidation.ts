@@ -14,3 +14,8 @@ export const loginSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().required()
 });
+
+export const updatePhoneSchema = Joi.object({
+    phone: Joi.string().min(7).max(15).required()
+        .messages({ 'string.min': 'Please provide a valid phone number' })
+});

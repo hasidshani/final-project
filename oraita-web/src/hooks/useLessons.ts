@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../store/store';
 import { fetchLessons, setCategoryFilter, setCityFilter } from '../store/lessonsSlice';
+import { isLessonUpcoming } from '../utils/lessonDate';
 
 /**
  * Encapsulates all lessons state + filters.
@@ -19,11 +20,8 @@ export function useLessons() {
 
     // Hide past lessons — only recomputes when list or filters change
     const filtered = useMemo(() => {
-        const now = new Date();
         return list.filter(lesson => {
-            // date from MongoDB is a full ISO string; extract YYYY-MM-DD before combining with time
-            const dateStr = lesson.date.split('T')[0];
-            if (new Date(`${dateStr}T${lesson.time}`) <= now) return false;
+            if (!isLessonUpcoming(lesson)) return false;
             const matchesCategory = !categoryFilter || lesson.category === categoryFilter;
             const matchesCity     = !cityFilter     || lesson.city     === cityFilter;
             return matchesCategory && matchesCity;

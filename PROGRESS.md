@@ -104,11 +104,13 @@ FinalProject/
         │   ├── store.ts             ← Redux configureStore (lessons reducer)
         │   └── lessonsSlice.ts      ← fetchLessons thunk + setCategoryFilter + setCityFilter
         ├── hooks/                   ← custom React hooks (logic separated from pages)
-        │   ├── useLessons.ts        ← fetchLessons + filter by category/city/past
-        │   ├── useDashboard.ts      ← fetch joined/created/favorites for logged-in user
-        │   ├── useSingleLesson.ts   ← fetch lesson + join + addFavorite actions
+        │   ├── useLessons.ts        ← fetchLessons + filter by category/city/upcoming
+        │   ├── useDashboard.ts      ← joined/created/favorites (upcoming only) + past lessons + leaveLesson/deleteLesson
+        │   ├── useSingleLesson.ts   ← fetch lesson + join/leave + toggleFavorite + rateLesson
         │   ├── useComments.ts       ← fetch comments + addComment
         │   └── useTeacherProfile.ts ← fetch teacher's future lessons + avgRating + cities
+        ├── utils/
+        │   └── lessonDate.ts        ← shared isLessonUpcoming() helper (single source of truth for past/upcoming)
         ├── components/
         │   ├── Navbar.tsx           ← Bootstrap navbar + navLinks.map() + AuthContext
         │   ├── Footer.tsx           ← Bootstrap footer + FOOTER_LINKS.map()
@@ -140,10 +142,11 @@ Base URL: `http://localhost:3000/api`
 |--------|-------|------|-------------|
 | GET | `/me` | ✅ | Get current logged-in user (with favorites array) |
 | POST | `/register` | ❌ | Register (JOI + rate limited) |
-| POST | `/login` | ❌ | Login → returns accessToken + refreshToken |
+| POST | `/login` | ❌ | Login → returns accessToken + refreshToken + favorites |
 | POST | `/logout` | ❌ | Invalidate refresh token |
 | POST | `/refresh` | ❌ | Get new access token |
-| POST | `/google` | ❌ | Google Sign-In — verifies credential, finds/creates user, returns tokens |
+| POST | `/google` | ❌ | Google Sign-In — verifies credential, finds/creates user, returns tokens (+ phone + favorites) |
+| PATCH | `/phone` | ✅ | Update logged-in user's phone number (used by the post-Google-login "add phone?" prompt) |
 | POST | `/favorites/:lessonId` | ✅ | Add lesson to favorites |
 | DELETE | `/favorites/:lessonId` | ✅ | Remove lesson from favorites |
 
@@ -152,8 +155,10 @@ Base URL: `http://localhost:3000/api`
 |--------|-------|------|-------------|
 | GET | `/` | ❌ | Get all lessons (creator populated) |
 | POST | `/` | ✅ | Create lesson — JSON body (image is a URL string, not a file) |
-| GET | `/:id` | ❌ | Get single lesson (creator + participants populated) |
+| GET | `/:id` | ❌ | Get single lesson (creator + participants populated, includes ratings array) |
 | POST | `/:id/join` | ✅ | Join lesson (checks capacity) |
+| DELETE | `/:id/join` | ✅ | Cancel registration (leave lesson) — validates user is a participant |
+| POST | `/:id/rate` | ✅ | Rate lesson 1-5 stars — participants only, only after lesson date has passed; updates or replaces existing rating, recomputes average |
 | DELETE | `/:id` | ✅ | Delete lesson (creator only) |
 
 ### File Upload (`/api/file`)
@@ -190,8 +195,9 @@ Authorization: Bearer <accessToken>
 
 ### Lesson
 ```ts
-{ title, description, category (enum), city (enum), date, time, image (URL string), creator: ObjectId→User, participants: [ObjectId→User], maxParticipants (default 50), rating (0-5), timestamps }
+{ title, description, category (enum), city (enum), date, time, image (URL string), creator: ObjectId→User, participants: [ObjectId→User], maxParticipants (default 50), rating (0-5 avg), ratings: [{ user: ObjectId→User, value: number }], timestamps }
 ```
+`rating` = recomputed average every time a user rates. `ratings` = individual entries (one per participant, updated in-place on re-rate).
 Valid categories: `חסידות | מוסר | הלכה | משנה | גמרא | פרשת שבוע`
 Valid cities: `נתניה | פרדס חנה`
 
@@ -238,7 +244,13 @@ VITE_API_URL=http://localhost:3000/api
 
 ## Current State
 
-### ✅ Everything Working (as of 2026-06-29)
+### ✅ Everything Working (as of 2026-07-06)
+- **Google Login phone prompt** — no longer auto-assigns a phone; after a Google login with no phone on file, an inline "add a phone number?" prompt appears (optional, skippable), saved via `PATCH /api/users/phone`
+- **Favorites toggle** — the favorite button on SingleLesson now toggles color (filled red when favorited, outline when not) and adds/removes on click instead of only adding
+- **Cancel registration** — participants can cancel their registration from SingleLesson or from the Dashboard "joined" tab (inline Hebrew confirm, no browser dialog)
+- **Past-lesson sync fix** — homepage city counts, All Lessons, Dashboard tabs, and Teacher Profile now all use one shared `isLessonUpcoming()` helper so they can no longer disagree about what counts as "past"; a new Dashboard "שיעורים שעברו" tab shows past lessons (created or joined) with manual delete for lessons the user created
+
+### ✅ Everything Working (as of 2026-06-30)
 - Register → Login → Dashboard flow (auth persists on refresh via `/api/users/me`)
 - Protected routes redirect to /login, return to intended page after login
 - Navbar: shows user name + logout when logged in, login link when logged out
@@ -261,6 +273,8 @@ VITE_API_URL=http://localhost:3000/api
 - **Google Login** — `POST /api/users/google`, `<GoogleLogin>` button on Login page, find-or-create user flow
 - Homepage city counts are live from DB (no longer hardcoded)
 - Date parsing bug fixed in `useLessons` + `useTeacherProfile` (MongoDB ISO date → `split('T')[0]`)
+- **Star Rating** — participants can rate a past lesson 1-5 stars; average updates live without page reload
+- **Delete confirmation** — Hebrew inline confirm before deleting a lesson in Dashboard
 
 ### ⚠ Still To Do (manual steps only)
 1. **Deploy** — MongoDB Atlas → Render (backend) → Vercel (frontend). See deployment guide below.
@@ -318,7 +332,7 @@ VITE_API_URL=http://localhost:3000/api
 
 4. **`React.FormEvent<T>` deprecated in React 19:** Use `{ preventDefault(): void }` as the event type instead. Already applied everywhere.
 
-5. **Past lesson filtering is client-side only:** Backend still returns all lessons. The `AllLessons`, `TeacherProfile`, and `Dashboard` pages filter on the frontend.
+5. **Past lesson filtering is client-side only (by design):** Backend still returns all lessons — deliberately not hard-deleted, since participants need past lessons to still exist in order to rate them. All frontend list views (`HomePage`, `AllLessons`, `TeacherProfile`, `Dashboard`) now share one `isLessonUpcoming()` helper (`oraita-web/src/utils/lessonDate.ts`) instead of each filtering independently — this was the root cause of a 2026-07-06 bug where the homepage showed stale city counts while All Lessons/Dashboard disagreed. Past lessons are still reachable via the Dashboard's "שיעורים שעברו" tab.
 
 6. **Helmet CORP header (FIXED):** Helmet adds `Cross-Origin-Resource-Policy: same-origin` to all responses by default. This blocked the React frontend (port 5173) from loading images served by the backend (port 3000) since they are different origins. Fixed by overriding the header to `cross-origin` specifically on the `/public` and `/uploads` static routes.
 
@@ -346,6 +360,16 @@ VITE_API_URL=http://localhost:3000/api
 ✅ POST /api/file with image → 200 + { url } saved to public/
 ✅ Image URL stored in MongoDB lessons.image field
 ✅ Image visible in SingleLesson page after upload
+✅ POST /api/lessons/:id/rate as participant on past lesson → 200 + rating recomputed
+✅ POST /api/lessons/:id/rate changing existing rating → updates in-place, ratings_count unchanged
+✅ POST /api/lessons/:id/rate as non-participant → 403
+✅ POST /api/lessons/:id/rate with value=0 → 400 validation error
+✅ POST /api/lessons/:id/rate on future lesson (even as participant) → 400
+✅ Delete button shows Hebrew confirmation before deleting
+✅ POST /api/users/favorites/:id then DELETE same → added then removed, GET /users/me reflects both states
+✅ POST /api/lessons/:id/join then DELETE /api/lessons/:id/join → joined then cancelled, participants count updates
+✅ DELETE /api/lessons/:id/join when not a participant → 400 rejected
+✅ PATCH /api/users/phone → 200, phone saved and returned in updated user object
 ```
 
 ---
@@ -436,6 +460,41 @@ VITE_API_URL=http://localhost:3000/api
 - ✅ Both `.env.example` files updated with placeholder keys
 - ✅ API verified: `POST /api/users/google` with empty body → 400 `Missing credential`; with fake token → 400 `Google authentication failed`
 
+### Session 6 (2026-06-30) — Star Rating + Delete Confirmation
+
+#### Star Rating (1-5 stars, past lessons only)
+- ✅ `server/models/lessons.ts` — added `ratings: [{ user: ObjectId, value: number }]` array to schema + `ILesson` interface; `rating` field stays as the computed average
+- ✅ `server/controllers/lessonController.ts` — new `rateLesson`:
+  - Validates value is 1-5
+  - Rejects if lesson date has not passed yet (400)
+  - Rejects if user is not a participant (403)
+  - Updates existing entry or appends new one (no duplicates per user)
+  - Recomputes `rating` as average of all `ratings[].value` and saves
+  - Returns `{ rating: newAverage }` to frontend
+- ✅ `server/routes/lessons_routes.ts` — added `POST /:id/rate` (authMiddleware)
+- ✅ `oraita-web/src/hooks/useSingleLesson.ts`:
+  - Added `ratings: Array<{ user: string; value: number }>` to `SingleLessonData` interface
+  - Added `rating` (submitting state), `rateLesson(value)` action
+  - Added `isPast` — true when lesson date is strictly before today (uses `split('T')[0]` for safe date comparison)
+  - Added `userRating` — current user's star value from `lesson.ratings`, 0 if not rated
+  - `setLesson` updater updates `lesson.rating` + `lesson.ratings` immediately on success → live re-render, no page reload
+  - Guard: `prev.ratings ?? []` in updater in case older DB docs return undefined
+- ✅ `oraita-web/src/pages/SingleLesson.tsx` — star rating card shown only when `isPast && isParticipant`:
+  - 5 clickable ★ symbols (gold `#D4A373` for rated stars, grey for unrated)
+  - Disabled while submitting; shows success message via `actionMsg`
+  - Users can re-click a different star to change their rating
+
+#### Delete Confirmation (Hebrew)
+- ✅ `oraita-web/src/pages/Dashboard.tsx` — `LessonRow` now has local `confirming` state:
+  - First click on 🗑️ מחק shows: **"האם אתה בטוח שברצונך למחוק?"** + `כן, מחק` / `ביטול` buttons inline
+  - `כן, מחק` proceeds with deletion; `ביטול` hides the confirmation with no action
+  - No browser `confirm()` dialog — fully inline React state
+
+#### Verified (live API tests)
+- Rating saves and recomputes average correctly
+- Changing a rating updates the existing entry (count stays constant)
+- All guard cases rejected: non-participant, invalid value, future lesson
+
 ### Session 4 (2026-06-26) — Image Upload (Lecturer's Approach)
 - ✅ Created `server/routes/file_routes.ts` — dedicated upload endpoint
   - Multer saves to `public/` folder (relative to CWD = project root)
@@ -453,4 +512,38 @@ VITE_API_URL=http://localhost:3000/api
   - Upload-then-submit: image uploaded to `/api/file` first, URL passed to lesson creation
 - ✅ Fixed Helmet CORP bug: `Cross-Origin-Resource-Policy: same-origin` blocked images loading from port 3000 in the frontend on port 5173
 - ✅ Updated `.gitignore`: `public/*` / `!public/.gitkeep`
+
+### Session 7 (2026-07-06) — Google Login Phone Prompt, Favorites Toggle, Cancel Registration, Past-Lesson Sync Fix
+
+#### Google Login — optional phone prompt (no more fabricated numbers)
+- Fixed bad data: removed an incorrect phone number from the `hasidshani@gmail.com` account — it had been typed manually through the regular registration form, not generated by Google login as first suspected. Confirmed via direct DB query that no account had ever actually signed in through Google (`password: 'google-signin'` matched zero users) before implementing the fix.
+- `server/controllers/userController.ts` — `googleSignin` now returns `phone` + `favorites` on the user object; new `updatePhone` controller updates the logged-in user's phone
+- `server/validation/userValidation.ts` — added `updatePhoneSchema`
+- `server/routes/users_routes.ts` — added `PATCH /api/users/phone` (authMiddleware + validate)
+- `oraita-web/src/context/AuthContext.tsx` — added `phone`/`favorites` to `AuthUser`, new `updateUser()` helper to patch the in-memory user after an action succeeds
+- `oraita-web/src/pages/Login.tsx` — after a Google login where `user.phone` is empty, shows an inline "add a phone number?" prompt (Yes → input → `PATCH /users/phone`; No/Skip → continue). Reappears on every Google login until a phone is saved.
+
+#### Favorites toggle (color change on save/unsave)
+- `oraita-web/src/hooks/useSingleLesson.ts` — replaced the one-way `addFavorite` with `isFavorited` + `toggleFavorite` (adds or removes depending on current state)
+- `oraita-web/src/pages/SingleLesson.tsx` — favorite button now toggles: filled red (`btn-danger`, 💔 "הסרה מהמועדפים") when favorited, outlined red (`btn-outline-danger`, ❤️ "שמירה במועדפים") when not
+- Backend `login`/`googleSignin` responses now include `favorites` so the toggle state is correct immediately after login, not just after a refresh
+
+#### Cancel class registration
+- `server/controllers/lessonController.ts` — new `leaveLesson` (validates the user is actually a participant before removing them)
+- `server/routes/lessons_routes.ts` — added `DELETE /api/lessons/:id/join`
+- `oraita-web/src/pages/SingleLesson.tsx` — the "רשום לשיעור" state is now clickable and shows an inline Hebrew confirm before cancelling (no browser `confirm()`)
+- `oraita-web/src/pages/Dashboard.tsx` — `LessonRow` generalized to take either `onDelete` (created lessons) or `onLeave` (joined lessons), same inline-confirm pattern as the existing delete flow
+- `oraita-web/src/hooks/useDashboard.ts` — added `leaveLesson` action
+
+#### Past-lesson sync bug fix
+- Root cause: four different places independently decided whether a lesson was "past" — `useLessons.ts` and `useTeacherProfile.ts` filtered correctly (with duplicated logic each), but `HomePage.tsx` (city counts) and `useDashboard.ts` (joined/created/favorites tabs) didn't filter past lessons at all. That's why the homepage showed stale counts (2 for Netanya, 3 for Pardes Hanna) while All Lessons showed nothing, and why an expired class kept appearing on the Dashboard.
+- New `oraita-web/src/utils/lessonDate.ts` — single shared `isLessonUpcoming(lesson)` helper
+- Applied consistently in `HomePage.tsx`, `useLessons.ts`, `useTeacherProfile.ts` (deduping their previous inline copies), and `useDashboard.ts` (joined/created/favorites now correctly hide past lessons)
+- Decision (confirmed with user): do **not** hard-delete past lessons — the star-rating feature requires a lesson to still exist and be past in order for participants to rate it. Instead added a **"שיעורים שעברו" (Past Lessons)** tab to Dashboard, listing every past lesson the user created or joined; rows for lessons they created get a 🗑️ delete button (creator-only, existing permission), joined-only rows are view-only since deleting someone else's lesson was never allowed server-side
+- Confirmed against real DB data: all 5 existing sample lessons are dated before 2026-07-06, so with this fix the homepage and All Lessons now correctly show 0/empty until new future-dated lessons are created — expected, not a bug (sample data had simply aged past its dates)
+
+#### Verified
+- Backend, live via curl against a temporary QA account (deleted afterward): join → favorite → unfavorite → cancel registration → re-cancel (correctly rejected with 400)
+- `PATCH /api/users/phone` saves and returns the updated phone
+- `tsc --noEmit` (backend) and `tsc -b` (frontend) both clean — only a pre-existing, unrelated `CreateLesson.tsx` warning remains
 .

@@ -5,7 +5,9 @@ import {
     getAllLessons,
     getLessonById,
     joinLesson,
-    deleteLesson
+    leaveLesson,
+    deleteLesson,
+    rateLesson
 } from '../controllers/lessonController';
 
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -25,6 +27,12 @@ router.get('/:id', getLessonById);
 
 // Join lesson — protected
 router.post('/:id/join', authMiddleware, joinLesson);
+
+// Leave lesson — protected (cancel registration)
+router.delete('/:id/join', authMiddleware, leaveLesson);
+
+// Rate lesson — protected (participants only, after lesson date)
+router.post('/:id/rate', authMiddleware, rateLesson);
 
 // Delete lesson — protected
 router.delete('/:id', authMiddleware, deleteLesson);
