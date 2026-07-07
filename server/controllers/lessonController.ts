@@ -403,6 +403,88 @@ export const rateLesson = async (
 };
 
 
+// Update lesson (creator only)
+export const updateLesson = async (
+    req: Request,
+    res: Response
+) => {
+
+    const lessonId =
+        req.params.id;
+
+    const userId =
+        req.userId as string;
+
+    const {
+        title,
+        description,
+        category,
+        city,
+        date,
+        time,
+        image = ''
+    } = req.body;
+
+    try {
+
+        const lesson =
+            await Lesson.findById(
+                lessonId
+            );
+
+        if (!lesson) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    'Lesson not found'
+            });
+        }
+
+        // Only creator can edit lesson
+        if (
+            lesson.creator.toString() !==
+            userId
+        ) {
+            return res.status(403).json({
+                success: false,
+                message:
+                    'Not authorized to edit this lesson'
+            });
+        }
+
+        lesson.title = title;
+        lesson.description = description;
+        lesson.category = category;
+        lesson.city = city;
+        lesson.date = date;
+        lesson.time = time;
+        lesson.image = image || '';
+
+        const updatedLesson =
+            await lesson.save();
+
+        return res.status(200).json({
+            success: true,
+            message:
+                'Lesson updated successfully',
+            lesson:
+                updatedLesson
+        });
+
+    } catch (error) {
+
+        return res.status(400).json({
+            success: false,
+            message:
+                error instanceof Error
+                    ? error.message
+                    : 'Unknown error'
+        });
+
+    }
+};
+
+
 // Delete lesson
 export const deleteLesson = async (
     req: Request,

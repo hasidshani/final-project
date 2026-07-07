@@ -70,12 +70,12 @@ FinalProject/
 │   │   ├── lessons.ts               ← Lesson schema (title, description, category, city, date, time, image, creator, participants, maxParticipants, rating)
 │   │   └── comments.ts              ← Comment schema (lesson, user, text)
 │   ├── controllers/
-│   │   ├── userController.ts        ← register, login, logout, refresh, getMe, addFavorite, removeFavorite
-│   │   ├── lessonController.ts      ← createLesson reads image from req.body (URL string, not req.file)
+│   │   ├── userController.ts        ← register, login, logout, refresh, getMe, addFavorite, removeFavorite (auth error messages in Hebrew)
+│   │   ├── lessonController.ts      ← createLesson reads image from req.body (URL string, not req.file); updateLesson (creator-only edit)
 │   │   └── commentController.ts     ← createComment, getCommentsByLesson, deleteComment
 │   ├── routes/
 │   │   ├── users_routes.ts          ← /api/users/*
-│   │   ├── lessons_routes.ts        ← /api/lessons/* (POST / is JSON — no multer here anymore)
+│   │   ├── lessons_routes.ts        ← /api/lessons/* (POST / is JSON — no multer here anymore; PATCH /:id for creator-only edit)
 │   │   ├── comments_routes.ts       ← /api/comments/*
 │   │   └── file_routes.ts           ← /api/file (POST / — multer saves to public/, returns {url})
 │   ├── middleware/
@@ -86,8 +86,8 @@ FinalProject/
 │   │   ├── upload.ts                ← legacy Multer config (kept, no longer used in lesson creation)
 │   │   └── rateLimiter.ts           ← apiLimiter (100/15min) + authLimiter (10/15min)
 │   └── validation/
-│       ├── userValidation.ts        ← registerSchema, loginSchema
-│       └── lessonValidation.ts      ← createLessonSchema (includes optional image string)
+│       ├── userValidation.ts        ← registerSchema, loginSchema, updatePhoneSchema (all messages in Hebrew)
+│       └── lessonValidation.ts      ← createLessonSchema (includes optional image string, reused for updateLesson)
 └── oraita-web/
     ├── package.json                 ← frontend dependencies
     ├── .env                         ← VITE_API_URL=http://localhost:3000/api (gitignored)
@@ -125,9 +125,9 @@ FinalProject/
             ├── Register.tsx         ← FIELDS.map() replaces 4 copy-pasted form groups
             ├── Dashboard.tsx        ← useDashboard hook + StatCard + TABS.map() + LessonRow
             ├── AllLessons.tsx       ← useLessons hook + CATEGORIES.map() + Bootstrap grid
-            ├── CreateLesson.tsx     ← hidden file input + image preview + upload-then-submit flow
-            ├── SingleLesson.tsx     ← useSingleLesson + useComments hooks + Bootstrap layout
-            ├── TeacherProfile.tsx   ← useTeacherProfile hook + LessonCard + statBadges.map()
+            ├── CreateLesson.tsx     ← hidden file input + image preview + upload-then-submit flow; dual-mode create/edit (edit via /editlesson/:id)
+            ├── SingleLesson.tsx     ← useSingleLesson + useComments hooks + Bootstrap layout; edit button shown to creator; description rendered with white-space: pre-wrap
+            ├── TeacherProfile.tsx   ← useTeacherProfile hook + LessonCard + statBadges.map(); empty-state message specifies "upcoming"
             └── NotFound.tsx         ← Bootstrap centered 404 page
 ```
 
@@ -159,6 +159,7 @@ Base URL: `http://localhost:3000/api`
 | POST | `/:id/join` | ✅ | Join lesson (checks capacity) |
 | DELETE | `/:id/join` | ✅ | Cancel registration (leave lesson) — validates user is a participant |
 | POST | `/:id/rate` | ✅ | Rate lesson 1-5 stars — participants only, only after lesson date has passed; updates or replaces existing rating, recomputes average |
+| PATCH | `/:id` | ✅ | Update lesson (creator only) — JOI-validated, same schema as create |
 | DELETE | `/:id` | ✅ | Delete lesson (creator only) |
 
 ### File Upload (`/api/file`)
@@ -243,6 +244,14 @@ VITE_API_URL=http://localhost:3000/api
 ---
 
 ## Current State
+
+### ✅ Everything Working (as of 2026-07-07)
+- **Edit lesson (creator only)** — new `PATCH /api/lessons/:id` route + `updateLesson` controller (creator-only, same 403 pattern as delete); `CreateLesson.tsx` now doubles as an edit form at `/editlesson/:id` (fetches + prefills the lesson, redirects non-creators away, skips the past-date guard so a past/already-scheduled lesson can still be edited); "✏️ ערוך שיעור" button added to `SingleLesson.tsx`'s sidebar, visible only to the lesson's creator
+- **Lesson description line breaks** — `SingleLesson.tsx` description `<p>` now has `white-space: pre-wrap`, so newlines the teacher types render as real line breaks instead of being collapsed
+- **Hebrew auth error messages** — login (`"אימייל או סיסמה שגויים"` for wrong password / unknown email), registration (duplicate email, missing fields), and all JOI validation messages in `registerSchema`/`loginSchema`/`updatePhoneSchema` are now in Hebrew instead of English, matching the rest of the RTL UI
+- **TeacherProfile empty state** — message now reads "לא נמצאו שיעורים עתידיים עבור מורה זה" (no *upcoming* lessons) instead of the ambiguous "no lessons", since the page only ever lists future lessons
+- **DB cleanup** — found 3 duplicate "שני חסיד" user accounts (different emails, from earlier Google-login testing); confirmed none had lessons/comments/ratings attached, then deleted the 2 duplicates and kept only `hasidshani@gmail.com` (phone `0534567877`)
+- **Google login phone-prompt re-verified** — confirmed (no code change needed) that the prompt only fires once per account: `Login.tsx` only shows it when `!user.phone`, and `googleSignin` never overwrites an existing phone on repeat logins
 
 ### ✅ Everything Working (as of 2026-07-06)
 - **Google Login phone prompt** — no longer auto-assigns a phone; after a Google login with no phone on file, an inline "add a phone number?" prompt appears (optional, skippable), saved via `PATCH /api/users/phone`
@@ -370,6 +379,11 @@ VITE_API_URL=http://localhost:3000/api
 ✅ POST /api/lessons/:id/join then DELETE /api/lessons/:id/join → joined then cancelled, participants count updates
 ✅ DELETE /api/lessons/:id/join when not a participant → 400 rejected
 ✅ PATCH /api/users/phone → 200, phone saved and returned in updated user object
+✅ PATCH /api/lessons/:id as creator → 200, description with \n preserved, updatedAt bumped
+✅ PATCH /api/lessons/:id as non-creator → 403 "Not authorized to edit this lesson"
+✅ POST /api/users/login with wrong password / unknown email → 400 "אימייל או סיסמה שגויים"
+✅ POST /api/users/register with duplicate email → 400 "קיים כבר משתמש עם כתובת אימייל זו"
+✅ tsc --noEmit (backend) and tsc -b (frontend) both clean — zero errors, including the previously pre-existing CreateLesson.tsx warning (removed dead DEFAULT_IMG constant)
 ```
 
 ---
@@ -545,5 +559,42 @@ VITE_API_URL=http://localhost:3000/api
 #### Verified
 - Backend, live via curl against a temporary QA account (deleted afterward): join → favorite → unfavorite → cancel registration → re-cancel (correctly rejected with 400)
 - `PATCH /api/users/phone` saves and returns the updated phone
-- `tsc --noEmit` (backend) and `tsc -b` (frontend) both clean — only a pre-existing, unrelated `CreateLesson.tsx` warning remains
-.
+- `tsc --noEmit` (backend) and `tsc -b` (frontend) both clean — only a pre-existing, unrelated `CreateLesson.tsx` warning remains (fixed in Session 8)
+
+### Session 8 (2026-07-07) — Edit Lesson, Line-Break Fix, Hebrew Auth Errors, DB Cleanup
+
+#### TeacherProfile empty-state wording
+- `oraita-web/src/pages/TeacherProfile.tsx` — "לא נמצאו שיעורים עבור מורה זה" → "לא נמצאו שיעורים **עתידיים** עבור מורה זה", since the page only ever lists a teacher's future lessons
+
+#### Database cleanup — duplicate "שני חסיד" accounts
+- Found 3 user documents with `name: "שני חסיד"` under different emails (`hasidshani@gmail.com` / phone `0534567877`, `gaya@gmail.com` / phone `0543346768`, `or@gmail.com` / phone `056778654`) — leftover from earlier manual testing of different Google accounts, not a dedup bug (Google sign-in matches by email, so different emails correctly create different users)
+- Verified via direct DB queries that neither duplicate had created/joined any lesson, posted a comment, or rated a lesson before deleting
+- Deleted the `gaya@gmail.com` and `or@gmail.com` documents; `hasidshani@gmail.com` (phone `0534567877`) is now the only "שני חסיד" account
+
+#### Google login phone-prompt — re-verified, no change needed
+- Re-read `Login.tsx`'s `handleGoogleSuccess` and `userController.ts`'s `googleSignin`: the prompt already only appears when `!user.phone`, and `googleSignin` never resets `phone` on an existing user, so a saved phone correctly suppresses the prompt on every later login (Google or password). Confirmed this was already correct — the duplicate accounts above were the actual issue, not this logic.
+
+#### Line-break rendering in lesson description
+- `oraita-web/src/pages/SingleLesson.tsx` — description `<p>` now has `style={{ whiteSpace: 'pre-wrap' }}`, so a teacher's typed line breaks render as real line breaks instead of being collapsed by default HTML whitespace handling
+- Verified via a live API round-trip: created a lesson with `\n` in the description, confirmed it's stored and returned intact by the backend (the fix is purely a frontend rendering concern — the data was never the problem)
+
+#### Edit lesson (creator only)
+- `server/controllers/lessonController.ts` — new `updateLesson`: loads the lesson, 403s if `lesson.creator` isn't the requesting user (same pattern as `deleteLesson`), otherwise overwrites `title`/`description`/`category`/`city`/`date`/`time`/`image` and saves
+- `server/routes/lessons_routes.ts` — added `PATCH /:id` (authMiddleware + `validate(createLessonSchema)`, reusing the same schema as lesson creation)
+- `oraita-web/src/pages/CreateLesson.tsx` — converted to dual-mode create/edit:
+  - Reads an optional `:id` route param; when present (`/editlesson/:id`), fetches the lesson on mount and prefills every field, redirecting away if the logged-in user isn't the creator
+  - Submits via `PATCH /lessons/:id` (→ navigates back to `/lesson/:id`) instead of `POST /lessons` (→ `/alllessons`) when in edit mode
+  - Skips the "can't schedule a lesson in the past" guard in edit mode, so a teacher can add to the description of a lesson that's already past or already scheduled
+  - Removed the pre-existing unused `DEFAULT_IMG` constant while rewriting the file (was flagged by `tsc -b` before this session)
+- `oraita-web/src/App.tsx` — added `PrivateRoute`-wrapped `/editlesson/:id` route
+- `oraita-web/src/pages/SingleLesson.tsx` — "✏️ ערוך שיעור" button in the sidebar, shown only when `user?._id === lesson.creator._id`
+- Verified live via curl against temporary QA accounts (both deleted afterward): non-creator PATCH → 403; creator PATCH → 200 with the multi-line description update persisted and returned correctly on a follow-up GET
+
+#### Hebrew auth error messages
+- `server/controllers/userController.ts` — translated the messages users actually see: login wrong-password/unknown-email (`"אימייל או סיסמה שגויים"`), login missing-fields fallback, login token-generation failure, register duplicate-email (`"קיים כבר משתמש עם כתובת אימייל זו"`), register missing-fields fallback
+- `server/validation/userValidation.ts` — added Hebrew `.messages()` overrides to every field in `registerSchema`, `loginSchema`, and `updatePhoneSchema` (empty/required/min-length/invalid-email cases), since `Login.tsx`/`Register.tsx` render the JOI `errors` array directly
+- Deliberately left 401/token-refresh error text in English — `oraita-web/src/services/api.ts`'s response interceptor handles those silently (clears tokens, redirects to `/login`) and never renders the message as text, so there's no user-facing benefit to translating them
+- Verified live: wrong password, unknown email, missing password, register with a too-short password, and register with a duplicate email all now return Hebrew messages
+
+#### Rate limiter — explained, not a bug
+- User hit `"Too many requests, please try again after 15 minutes."` on the All Lessons page — traced to `apiLimiter` in `server/middleware/rateLimiter.ts` (100 requests/15min per IP, applied to all of `/api/*` in `app.ts:46`), tripped by the volume of curl requests used to verify the fixes above against the local dev server. Not a code issue; resets automatically after the time window. Offered to raise the local limit or exempt development mode if it becomes disruptive during testing — no decision made yet.

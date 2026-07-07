@@ -60,7 +60,7 @@ function SingleLesson() {
                             </Link>
                         </div>
 
-                        <p className="lead mb-4">{lesson.description}</p>
+                        <p className="lead mb-4" style={{ whiteSpace: 'pre-wrap' }}>{lesson.description}</p>
 
                         <div className="d-inline-flex align-items-center bg-light px-3 py-2 rounded mb-4">
                             <span className="fw-bold">
@@ -197,6 +197,16 @@ function SingleLesson() {
                                 <button className="btn btn-dark w-100 mb-3 fw-bold" onClick={join} disabled={joining}>
                                     📋 {joining ? 'נרשם...' : 'הירשם לשיעור'}
                                 </button>
+                            )}
+
+                            {/* Edit button — only visible to the lesson's creator */}
+                            {user?._id === lesson.creator._id && (
+                                <Link
+                                    to={`/editlesson/${lesson._id}`}
+                                    className="btn btn-outline-dark w-100 mb-3 fw-bold text-decoration-none"
+                                >
+                                    ✏️ ערוך שיעור
+                                </Link>
                             )}
 
                             {/* Teacher card */}

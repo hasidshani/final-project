@@ -34,6 +34,9 @@ function App() {
                     <Route path="/createlesson" element={
                         <PrivateRoute><CreateLesson /></PrivateRoute>
                     } />
+                    <Route path="/editlesson/:id" element={
+                        <PrivateRoute><CreateLesson /></PrivateRoute>
+                    } />
 
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />

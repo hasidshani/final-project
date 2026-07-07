@@ -21,7 +21,7 @@ function TeacherProfile() {
 
     if (lessons.length === 0) return (
         <Layout>
-            <p className="text-center mt-5">לא נמצאו שיעורים עבור מורה זה</p>
+            <p className="text-center mt-5">לא נמצאו שיעורים עתידיים עבור מורה זה</p>
             <div className="text-center mt-3">
                 <Link to="/alllessons" className="btn btn-dark">חזרה לכל השיעורים</Link>
             </div>

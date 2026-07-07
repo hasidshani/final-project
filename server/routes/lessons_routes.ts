@@ -6,6 +6,7 @@ import {
     getLessonById,
     joinLesson,
     leaveLesson,
+    updateLesson,
     deleteLesson,
     rateLesson
 } from '../controllers/lessonController';
@@ -33,6 +34,9 @@ router.delete('/:id/join', authMiddleware, leaveLesson);
 
 // Rate lesson — protected (participants only, after lesson date)
 router.post('/:id/rate', authMiddleware, rateLesson);
+
+// Update lesson — protected + validated (creator only, checked in controller)
+router.patch('/:id', authMiddleware, validate(createLessonSchema), updateLesson);
 
 // Delete lesson — protected
 router.delete('/:id', authMiddleware, deleteLesson);

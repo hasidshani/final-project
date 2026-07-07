@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const todayStr = () => new Date().toISOString().split('T')[0];
@@ -13,8 +14,6 @@ const isDateTimePast = (dateStr: string, timeStr: string) =>
 
 const CATEGORIES = ['חסידות', 'מוסר', 'הלכה', 'משנה', 'גמרא', 'פרשת שבוע'];
 const CITIES = ['פרדס חנה', 'נתניה'];
-
-const DEFAULT_IMG = '/lesson-placeholder.png';
 
 // Upload image to /api/file and return the URL
 const uploadImage = (file: File): Promise<string> => {
@@ -30,6 +29,10 @@ const uploadImage = (file: File): Promise<string> => {
 };
 
 function CreateLesson() {
+    const { id } = useParams<{ id: string }>();
+    const isEditMode = Boolean(id);
+    const { user } = useAuth();
+
     const [title, setTitle]           = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory]     = useState('');
@@ -37,12 +40,37 @@ function CreateLesson() {
     const [date, setDate]             = useState('');
     const [time, setTime]             = useState('');
     const [imageFile, setImageFile]   = useState<File | null>(null);
+    const [existingImage, setExistingImage] = useState('');
     const [imgSrc, setImgSrc]         = useState('');
     const [error, setError]           = useState('');
     const [loading, setLoading]       = useState(false);
+    const [pageLoading, setPageLoading] = useState(isEditMode);
 
     const photoRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
+
+    // In edit mode, load the existing lesson and prefill the form
+    useEffect(() => {
+        if (!isEditMode) return;
+        api.get(`/lessons/${id}`)
+            .then(res => {
+                const lesson = res.data.lesson;
+                if (user && lesson.creator._id !== user._id) {
+                    navigate(`/lesson/${id}`, { replace: true });
+                    return;
+                }
+                setTitle(lesson.title);
+                setDescription(lesson.description);
+                setCategory(lesson.category);
+                setCity(lesson.city);
+                setDate(lesson.date.split('T')[0]);
+                setTime(lesson.time);
+                setExistingImage(lesson.image || '');
+                setImgSrc(lesson.image || '');
+            })
+            .catch(() => setError('השיעור לא נמצא'))
+            .finally(() => setPageLoading(false));
+    }, [id, isEditMode, user, navigate]);
 
     const handlePhotoClick = () => {
         photoRef.current?.click();
@@ -60,31 +88,28 @@ function CreateLesson() {
         e.preventDefault();
         setError('');
 
-        if (date && time && isDateTimePast(date, time)) {
+        if (!isEditMode && date && time && isDateTimePast(date, time)) {
             setError('לא ניתן לקבוע שיעור לתאריך או שעה שכבר עברו');
             return;
         }
 
         setLoading(true);
         try {
-            // Step 1: Upload image first (if selected) → get URL
-            let imageUrl = '';
+            // Step 1: Upload image first (if a new one was selected) → get URL
+            let imageUrl = existingImage;
             if (imageFile) {
                 imageUrl = await uploadImage(imageFile);
             }
 
-            // Step 2: Create lesson with image URL as JSON
-            await api.post('/lessons', {
-                title,
-                description,
-                category,
-                city,
-                date,
-                time,
-                image: imageUrl
-            });
+            const payload = { title, description, category, city, date, time, image: imageUrl };
 
-            navigate('/alllessons');
+            if (isEditMode) {
+                await api.patch(`/lessons/${id}`, payload);
+                navigate(`/lesson/${id}`);
+            } else {
+                await api.post('/lessons', payload);
+                navigate('/alllessons');
+            }
         } catch (err: any) {
             const serverErrors = err.response?.data?.errors;
             if (serverErrors?.length > 0) {
@@ -100,6 +125,8 @@ function CreateLesson() {
     const today  = todayStr();
     const minTime = date === today ? nowTimeStr() : '';
 
+    if (pageLoading) return <Layout><div className="text-center p-5">טוען...</div></Layout>;
+
     return (
         <Layout>
             <main className="container py-5 d-flex justify-content-center">
@@ -107,8 +134,10 @@ function CreateLesson() {
                     <div className="card-body p-5">
 
                         <div className="text-center mb-4">
-                            <h1 className="fw-bold mb-2">יצירת שיעור חדש</h1>
-                            <p className="text-muted">מלאו את הפרטים כדי לפרסם שיעור תורה חדש בקהילה</p>
+                            <h1 className="fw-bold mb-2">{isEditMode ? 'עריכת שיעור' : 'יצירת שיעור חדש'}</h1>
+                            <p className="text-muted">
+                                {isEditMode ? 'עדכנו את פרטי השיעור' : 'מלאו את הפרטים כדי לפרסם שיעור תורה חדש בקהילה'}
+                            </p>
                         </div>
 
                         {error && <div className="error-message">{error}</div>}
@@ -233,7 +262,7 @@ function CreateLesson() {
                                         id="date"
                                         className="form-control"
                                         value={date}
-                                        min={today}
+                                        min={isEditMode ? undefined : today}
                                         onChange={e => { setDate(e.target.value); setTime(''); }}
                                         required
                                     />
@@ -245,7 +274,7 @@ function CreateLesson() {
                                         id="time"
                                         className="form-control"
                                         value={time}
-                                        min={minTime || undefined}
+                                        min={isEditMode ? undefined : (minTime || undefined)}
                                         onChange={e => setTime(e.target.value)}
                                         required
                                     />
@@ -258,7 +287,9 @@ function CreateLesson() {
                                     className="btn btn-dark px-5 py-2 fw-bold fs-5"
                                     disabled={loading}
                                 >
-                                    {loading ? 'מפרסם...' : 'פרסם שיעור ←'}
+                                    {loading
+                                        ? (isEditMode ? 'שומר...' : 'מפרסם...')
+                                        : (isEditMode ? 'שמור שינויים ←' : 'פרסם שיעור ←')}
                                 </button>
                             </div>
 

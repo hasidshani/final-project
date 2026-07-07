@@ -27,7 +27,7 @@ export const registerUser = async (
     if (!name || !email || !password) {
         return res.status(400).json({
             success: false,
-            message: 'Name, email and password are required'
+            message: 'יש להזין שם, אימייל וסיסמה'
         });
     }
     try {
@@ -39,7 +39,7 @@ export const registerUser = async (
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: 'User already exists'
+                message: 'קיים כבר משתמש עם כתובת אימייל זו'
             });
         }
         // Generate a salt for password hashing
@@ -139,7 +139,7 @@ export const loginUser = async (
     // Basic validation
     if (!email || !password) {
         return res.status(400).json({
-            message: 'Email and password are required'
+            message: 'יש להזין אימייל וסיסמה'
         });
     }
     try {
@@ -152,7 +152,7 @@ export const loginUser = async (
         // Check if user exists
         if (!user) {
             return res.status(400).json({
-                message: 'Wrong email or password'
+                message: 'אימייל או סיסמה שגויים'
             });
         }
         // Compare entered password with stored hashed password
@@ -163,7 +163,7 @@ export const loginUser = async (
         // Check if password is correct
         if (!validPassword) {
             return res.status(400).json({
-                message: 'Wrong email or password'
+                message: 'אימייל או סיסמה שגויים'
             });
         }
         // Generate access token and refresh token
@@ -174,7 +174,7 @@ export const loginUser = async (
         if (!tokens) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing auth configuration'
+                message: 'שגיאת שרת, נסו שוב מאוחר יותר'
             });
         }
 
