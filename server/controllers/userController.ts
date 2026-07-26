@@ -531,13 +531,16 @@ export const googleSignin = async (req: Request, res: Response) => {
     if (!credential) {
         return res.status(400).json({ success: false, message: 'Missing credential' });
     }
+    if (!process.env.GOOGLE_CLIENT_ID) {
+        return res.status(500).json({ success: false, message: 'Google login is not configured' });
+    }
     try {
         const ticket = await googleClient.verifyIdToken({
             idToken: credential,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
         const payload = ticket.getPayload();
-        if (!payload?.email) {
+        if (!payload?.email || !payload.email_verified) {
             return res.status(400).json({ success: false, message: 'Invalid Google token' });
         }
 

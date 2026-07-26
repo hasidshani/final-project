@@ -18,7 +18,7 @@ A Torah lessons platform called **אורייתא**. Users can browse, register f
 | State | Context API (auth) + Redux Toolkit (lessons) |
 | HTTP client | Axios |
 | Security | Helmet + express-rate-limit + JOI validation |
-| File upload | Multer (disk storage → `public/`) + separate `/api/file` route |
+| File upload | Multer (memory storage) → Cloudinary (`/api/file` route uploads buffer, returns Cloudinary `secure_url`) |
 | Design | Bootstrap 5 + custom CSS variables (gold theme, RTL) |
 | React patterns | Custom hooks (`src/hooks/`), reusable components, `.map()` lists |
 
@@ -77,13 +77,13 @@ FinalProject/
 │   │   ├── users_routes.ts          ← /api/users/*
 │   │   ├── lessons_routes.ts        ← /api/lessons/* (POST / is JSON — no multer here anymore; PATCH /:id for creator-only edit)
 │   │   ├── comments_routes.ts       ← /api/comments/*
-│   │   └── file_routes.ts           ← /api/file (POST / — multer saves to public/, returns {url})
+│   │   └── file_routes.ts           ← /api/file (POST / — multer buffers upload → Cloudinary → returns {url: secure_url}; ⚠ currently no auth middleware — open endpoint)
 │   ├── middleware/
 │   │   ├── authMiddleware.ts        ← JWT verify → sets req.userId
 │   │   ├── errorHandler.ts          ← global 4-param error handler
 │   │   ├── logger.ts                ← request logger
 │   │   ├── validate.ts              ← JOI middleware wrapper (stripUnknown: true)
-│   │   ├── upload.ts                ← legacy Multer config (kept, no longer used in lesson creation)
+│   │   ├── upload.ts                ← dead code — old disk-storage Multer config from the pre-Cloudinary flow, not imported anywhere (file_routes.ts has its own inline memoryStorage config)
 │   │   └── rateLimiter.ts           ← apiLimiter (100/15min) + authLimiter (10/15min)
 │   └── validation/
 │       ├── userValidation.ts        ← registerSchema, loginSchema, updatePhoneSchema (all messages in Hebrew)
@@ -165,7 +165,7 @@ Base URL: `http://localhost:3000/api`
 ### File Upload (`/api/file`)
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
-| POST | `/` | ❌ | Upload image → saved to `public/` → returns `{ url: "http://localhost:3000/public/filename.jpg" }` |
+| POST | `/` | ✅ | Upload image → Multer buffers in memory → streamed to Cloudinary → returns `{ url: "<cloudinary secure_url>" }` |
 
 ### Comments (`/api/comments`)
 | Method | Route | Auth | Description |
@@ -209,16 +209,25 @@ Valid cities: `נתניה | פרדס חנה`
 
 ---
 
-## Image Upload Flow (Lecturer's Approach)
+## Image Upload Flow (Cloudinary)
+
+> Superseded the original local-disk Multer approach (images saved to `FinalProject/public/`). Migrated to Cloudinary in the same session as Google OAuth (commit `9700e3e`), but this doc wasn't updated at the time — corrected on 2026-07-13.
 
 1. User clicks 📷 button on CreateLesson form → hidden `<input type="file">` opens via `useRef`
 2. `URL.createObjectURL(file)` shows local preview immediately (no network request yet)
 3. On form submit:
-   - **Step 1:** `POST /api/file` with `multipart/form-data` → Multer saves to `FinalProject/public/filename.jpg` → returns `{ url: "http://localhost:3000/public/filename.jpg" }`
+   - **Step 1:** `POST /api/file` with `multipart/form-data` → Multer buffers the file in memory (`memoryStorage`, 5MB limit, image mimetypes/extensions only) → streamed to Cloudinary via `cloudinary.uploader.upload_stream` (folder: `oraita`) → returns `{ url: "<cloudinary secure_url>" }`
    - **Step 2:** `POST /api/lessons` with JSON body including `image: url`
-4. Lesson stored in MongoDB with image URL in the `image` field
-5. To verify: open MongoDB Compass → `lessons` collection → find lesson → `image` field shows full URL
-6. Frontend `<img src={lesson.image}>` loads from that URL
+4. Lesson stored in MongoDB with the Cloudinary `secure_url` in the `image` field
+5. To verify: open MongoDB Compass → `lessons` collection → find lesson → `image` field shows the `res.cloudinary.com/...` URL
+6. Frontend `<img src={lesson.image}>` loads directly from Cloudinary
+
+**Gaps raised by lecturer — fixed 2026-07-26 (see "Lecturer feedback" above):**
+- ~~`POST /api/file` has no auth middleware~~ → now requires `authMiddleware`
+- ~~`image` field accepts any string~~ → now restricted to `res.cloudinary.com/<our cloud name>/...`
+
+**Remaining note (unrelated to lecturer feedback):**
+- The old `public/`/`uploads/` static-serving routes in `app.ts` are kept only for backwards compatibility with any lesson documents that still reference pre-migration local image paths; new uploads never write there anymore
 
 ---
 
@@ -232,9 +241,13 @@ TOKEN_SECRET=mySuperSecretKey123
 TOKEN_EXPIRATION=1h
 REFRESH_TOKEN_EXPIRATION=7d
 CLIENT_URL=http://localhost:5173
-SERVER_URL=http://localhost:3000
 NODE_ENV=development
+CLOUDINARY_CLOUD_NAME=<from cloudinary.com dashboard>
+CLOUDINARY_API_KEY=<from cloudinary.com dashboard>
+CLOUDINARY_API_SECRET=<from cloudinary.com dashboard>
+GOOGLE_CLIENT_ID=<from console.cloud.google.com>
 ```
+`SERVER_URL` is no longer used anywhere in the code (it was only needed to build local `/public/...` image URLs under the old Multer disk-storage flow — Cloudinary now returns absolute URLs directly).
 
 ### Frontend — `oraita-web/.env`
 ```
@@ -290,6 +303,28 @@ VITE_API_URL=http://localhost:3000/api
 2. **Update README** — replace `_coming soon_` with real live URLs once deployed.
 3. **Mobile responsiveness** — do a quick check on phone after deploy.
 
+### ✅ Lecturer feedback — implemented (2026-07-26)
+
+Lecturer's original note (paraphrased): Google auth architecture is sound, but must verify `email_verified` and confirm authentication via `GOOGLE_CLIENT_ID`. Cloudinary upload mechanism is not secure/authenticated (currently open) and the `image` field must be validated as an actual URL, or the app will have recurring image bugs.
+
+Open sub-questions from 2026-07-13 were resolved directly with the user (not the lecturer) on 2026-07-26 so implementation could proceed: (a) upload auth → blanket `authMiddleware`, not scoped to lesson-creation; (b) Google auth → also add the fail-closed `GOOGLE_CLIENT_ID` guard.
+
+**4. Google auth — `email_verified` + fail-closed `GOOGLE_CLIENT_ID` guard**
+- File: `server/controllers/userController.ts`, `googleSignin`
+- Added `if (!process.env.GOOGLE_CLIENT_ID) return res.status(500)...` before calling `verifyIdToken`, so a misconfigured server rejects Google logins instead of silently passing `audience: undefined`.
+- Added `!payload.email_verified` to the existing `!payload?.email` check — unverified Google emails are now rejected with the same "Invalid Google token" 400.
+
+**5. Cloudinary upload — auth required on `POST /api/file`**
+- File: `server/routes/file_routes.ts`
+- Added `authMiddleware` to the route: `router.post('/', authMiddleware, upload.single('file'), ...)`. Any logged-in user can upload; unauthenticated requests now get 401.
+
+**6. Cloudinary upload — `image` restricted to our Cloudinary account**
+- File: `server/validation/lessonValidation.ts`
+- Replaced `image: Joi.string().allow('').optional()` with `Joi.string().uri({ scheme: ['https'] }).allow('').optional().custom(...)`: the `.uri()` call validates the value is a well-formed HTTPS URI (rejects malformed strings — stray spaces, control characters — even if they happen to share the right prefix), and the `.custom()` validator additionally checks it starts with `https://res.cloudinary.com/<CLOUDINARY_CLOUD_NAME>/` (cloud name read from `process.env` at request time, not baked in at module load — avoids a dotenv/import-order footgun). Both error paths (`string.uri`, `string.uriCustomScheme`, `any.invalid`) map to the Hebrew message `"כתובת התמונה אינה תקינה"`. Same schema is reused by both create and `PATCH /:id`, so one change covers both.
+- Added 2026-07-26 after reviewing the lecturer's detailed written explanation (Level A vs. Level B tradeoff — he recommended Level B: `Joi.string().uri({scheme:['https']}).pattern(/^https:\/\/res\.cloudinary\.com\//)`). Our cloud-name-specific check is already stricter than his example (his only checks the bare domain); the one piece his example had that ours didn't was the `.uri()` structural check, now added.
+
+**Verified live** (temporary QA account, deleted after): `POST /api/file` without token → 401; with token, no file → 400 (passes auth, fails at multer as expected); `POST /api/lessons` with a non-Cloudinary `image` URL → 400 validation error; with a `res.cloudinary.com/<real cloud name>/...` URL → 201 created. `tsc --noEmit` clean.
+
 ---
 
 ## Deployment Guide (manual steps)
@@ -311,11 +346,14 @@ VITE_API_URL=http://localhost:3000/api
   TOKEN_EXPIRATION        = 1h
   REFRESH_TOKEN_EXPIRATION = 7d
   CLIENT_URL     = https://<your-vercel-url>.vercel.app
-  SERVER_URL     = https://<your-render-url>.onrender.com
   NODE_ENV       = production
   PORT           = 3000
+  CLOUDINARY_CLOUD_NAME = <from cloudinary.com dashboard>
+  CLOUDINARY_API_KEY    = <from cloudinary.com dashboard>
+  CLOUDINARY_API_SECRET = <from cloudinary.com dashboard>
+  GOOGLE_CLIENT_ID       = <from console.cloud.google.com>
   ```
-- ⚠️ Note: Render's filesystem is ephemeral — uploaded images in `public/` are lost on restart. For production use Cloudinary/S3.
+- Uploaded images go to Cloudinary, not the local filesystem, so Render's ephemeral disk is no longer a concern for images (see Known Issue #3, updated).
 
 ### C — Vercel (frontend)
 - Root directory: `oraita-web`
@@ -337,7 +375,7 @@ VITE_API_URL=http://localhost:3000/api
 
 2. **Bootstrap location:** Bootstrap is in root `node_modules/` (root `package.json`), not `oraita-web/package.json`. Vite resolves it from the parent. Works fine.
 
-3. **Multer + ephemeral Render filesystem:** Uploaded images are stored on Render's ephemeral disk and are lost on restart. Acceptable for a student project; production would use Cloudinary/S3.
+3. **Multer + ephemeral Render filesystem (RESOLVED via Cloudinary migration):** Originally uploaded images were stored on Render's ephemeral disk and lost on restart. Fixed by migrating `/api/file` to upload to Cloudinary instead (Multer now only buffers the file in memory before streaming it to Cloudinary — nothing is written to local disk anymore). The old `public/`/`uploads/` static routes remain in `app.ts` for backwards compatibility with any pre-migration image URLs already saved in the DB.
 
 4. **`React.FormEvent<T>` deprecated in React 19:** Use `{ preventDefault(): void }` as the event type instead. Already applied everywhere.
 
@@ -384,6 +422,16 @@ VITE_API_URL=http://localhost:3000/api
 ✅ POST /api/users/login with wrong password / unknown email → 400 "אימייל או סיסמה שגויים"
 ✅ POST /api/users/register with duplicate email → 400 "קיים כבר משתמש עם כתובת אימייל זו"
 ✅ tsc --noEmit (backend) and tsc -b (frontend) both clean — zero errors, including the previously pre-existing CreateLesson.tsx warning (removed dead DEFAULT_IMG constant)
+✅ POST /api/file without auth token → 401 (was open before Session 10)
+✅ POST /api/file with token, no file → 400 (passes auth, correctly reaches multer)
+✅ POST /api/users/google with GOOGLE_CLIENT_ID unset on server → 500 "Google login is not configured" (fail-closed guard)
+✅ POST /api/users/google with GOOGLE_CLIENT_ID restored → back to normal 400 "Google authentication failed" for a fake token
+✅ googleSignin() called directly with mocked email_verified: false → 400 "Invalid Google token", no user created in DB
+✅ googleSignin() called directly with mocked email_verified: true → 200, user created normally
+✅ POST /api/lessons with image from a non-Cloudinary domain → 400 "כתובת התמונה אינה תקינה"
+✅ POST /api/lessons with image = "" (empty) → 201, allowed
+✅ POST /api/lessons with a valid https://res.cloudinary.com/<our cloud name>/... URL → 201
+✅ POST /api/lessons with a well-formed-prefix but malformed URI (embedded space/script tag) → 400, rejected by the added .uri() check
 ```
 
 ---
@@ -590,6 +638,31 @@ VITE_API_URL=http://localhost:3000/api
 - `oraita-web/src/pages/SingleLesson.tsx` — "✏️ ערוך שיעור" button in the sidebar, shown only when `user?._id === lesson.creator._id`
 - Verified live via curl against temporary QA accounts (both deleted afterward): non-creator PATCH → 403; creator PATCH → 200 with the multi-line description update persisted and returned correctly on a follow-up GET
 
+### Session 9 (2026-07-13) — Lecturer Feedback Review + Docs Correction
+
+#### Lecturer feedback received
+Two points on the current implementation:
+1. **Google auth** — architecture sound, but needs an `email_verified` check on the Google token payload, plus confirmation the token is authenticated against `GOOGLE_CLIENT_ID`.
+2. **Cloudinary upload** — the upload mechanism isn't secure/authenticated (currently open), and the `image` field needs to be validated as an actual URL.
+
+#### Investigation (no code changes made yet)
+- Confirmed `googleSignin` (`server/controllers/userController.ts`) already passes `audience: process.env.GOOGLE_CLIENT_ID` to `verifyIdToken` — that half of the lecturer's Google-auth ask is already satisfied. The real gap is `payload?.email_verified`, which is never checked.
+- Confirmed `POST /api/file` (`server/routes/file_routes.ts`) has no auth middleware — open to unauthenticated requests, matching the lecturer's note exactly.
+- Confirmed `image` field in `server/validation/lessonValidation.ts` is `Joi.string().allow('').optional()` — accepts any string, not validated as a URL.
+- Sent the lecturer clarifying questions before implementing (scope of the `GOOGLE_CLIENT_ID` fail-closed check; whether upload auth should be general-login-gated or narrower; whether URL validation should be generic `Joi.string().uri()` or restricted to the Cloudinary domain specifically, since images are only ever supposed to originate from our own Cloudinary account). Awaiting reply.
+
+#### Docs correction (unrelated to the lecturer's note, found while investigating)
+- Discovered `PROGRESS.md` still documented the original local-disk Multer upload flow (images saved to `FinalProject/public/`), but the codebase had already migrated to Cloudinary (`server/routes/file_routes.ts` uses `cloudinary.uploader.upload_stream`, `cloudinary` is in `package.json`, `CLOUDINARY_*` env vars are in `.env.example`). Confirmed via `git log` that this migration is already committed (part of commit `9700e3e`, "Add content image and Google OAuth login") — not in-progress work, just a docs gap from that session.
+- Also found `middleware/upload.ts` (the old disk-storage Multer config) is now fully dead code — not imported anywhere, since `file_routes.ts` has its own inline `memoryStorage` config.
+- Also found `SERVER_URL` env var is no longer referenced anywhere in the code (was only needed to build local `/public/...` URLs under the old flow; Cloudinary returns absolute URLs directly).
+- Updated: Tech Stack table, folder structure comments, API endpoint table, "Image Upload Flow" section (rewritten for Cloudinary), Environment Variables section, Deployment Guide (Render env vars + ephemeral-disk note), Known Issue #3 (marked resolved), and added the two lecturer-flagged gaps to a new "Still To Do" entry so they don't get lost before the lecturer replies.
+
+#### Lecturer reply received (image URL validation question only)
+- Lecturer confirmed: images should always come from Cloudinary (upload → `secure_url` → passed to lesson creation), but nothing on the server currently enforces that link — `POST /api/lessons` / `PATCH /api/lessons/:id` accept `image` as a free JSON string, so right now any string is accepted, including an arbitrary external URL.
+- His answer: use the **Cloudinary-domain-restricted** validation (`res.cloudinary.com/<cloud_name>/...`), not a generic `Joi.string().uri()` check — the generic check would still let through non-Cloudinary URLs, which is weaker than the app's actual intended design.
+- This resolves the URL-validation half of the original Cloudinary question. Recorded as item 6 in "Still To Do" above, marked ready to implement.
+- **Still waiting on:** (a) whether `POST /api/file` auth should be a blanket login check or scoped narrower to lesson creation, (b) whether the Google auth fix needs an added fail-closed guard for a missing `GOOGLE_CLIENT_ID`. Nothing should be implemented for those two until he replies.
+
 #### Hebrew auth error messages
 - `server/controllers/userController.ts` — translated the messages users actually see: login wrong-password/unknown-email (`"אימייל או סיסמה שגויים"`), login missing-fields fallback, login token-generation failure, register duplicate-email (`"קיים כבר משתמש עם כתובת אימייל זו"`), register missing-fields fallback
 - `server/validation/userValidation.ts` — added Hebrew `.messages()` overrides to every field in `registerSchema`, `loginSchema`, and `updatePhoneSchema` (empty/required/min-length/invalid-email cases), since `Login.tsx`/`Register.tsx` render the JOI `errors` array directly
@@ -598,3 +671,32 @@ VITE_API_URL=http://localhost:3000/api
 
 #### Rate limiter — explained, not a bug
 - User hit `"Too many requests, please try again after 15 minutes."` on the All Lessons page — traced to `apiLimiter` in `server/middleware/rateLimiter.ts` (100 requests/15min per IP, applied to all of `/api/*` in `app.ts:46`), tripped by the volume of curl requests used to verify the fixes above against the local dev server. Not a code issue; resets automatically after the time window. Offered to raise the local limit or exempt development mode if it becomes disruptive during testing — no decision made yet.
+
+### Session 10 (2026-07-26 – 2026-07-27) — Lecturer Feedback Items 4-6 Implemented + Verified + Refined
+
+#### Implementation
+The two open sub-questions from Session 9 (blanket vs. scoped upload auth; whether to add the `GOOGLE_CLIENT_ID` fail-closed guard) were still unanswered by the lecturer, so they were put to Shani directly to decide rather than blocking further — she chose blanket `authMiddleware` for uploads and confirmed the fail-closed guard should be added.
+
+- `server/controllers/userController.ts` (`googleSignin`) — added a 500 guard when `GOOGLE_CLIENT_ID` is unset before calling `verifyIdToken`, and added `!payload.email_verified` to the existing email check
+- `server/routes/file_routes.ts` — added `authMiddleware` to `POST /api/file`; unauthenticated uploads now 401
+- `server/validation/lessonValidation.ts` — `image` field now uses a `.custom()` Joi validator requiring the value start with `https://res.cloudinary.com/<CLOUDINARY_CLOUD_NAME>/`, read from `process.env` at request time (not baked in at module load, which would have raced `dotenv.config()` in `server.ts`)
+- Verified live end-to-end with a temporary QA account (deleted after, along with its test lesson): unauthenticated upload → 401; authenticated upload with no file → 400 (correctly reaches multer); non-Cloudinary `image` URL on lesson create → 400; real Cloudinary-shaped URL → 201. `tsc --noEmit` clean.
+
+#### MongoDB inspection (how images are actually stored)
+- Queried the `lessons` collection directly: 15 lessons total, 13 with a real `https://res.cloudinary.com/dm0dy48um/image/upload/v<timestamp>/oraita/<public_id>.<ext>` URL, 2 with `image: ""` (created before an image was attached — allowed since the field is optional). Confirmed this matches exactly what the new validator now enforces going forward.
+
+#### Deeper verification of the two Google-auth checks
+Shani asked how to actually *check* (not just read) that the `email_verified` and `GOOGLE_CLIENT_ID` fixes work, since real Google logins essentially always carry `email_verified: true` and can't be used to trigger the rejection path through the UI.
+- **`email_verified`** — wrote a throwaway script (`qa_test_email_verified.ts`, deleted after) that monkey-patches `OAuth2Client.prototype.verifyIdToken` and calls the real `googleSignin` function directly with a mocked payload: `email_verified: false` → `400 "Invalid Google token"`, no user created in DB; `email_verified: true` → `200`, user created normally. Both test users deleted afterward.
+- **`GOOGLE_CLIENT_ID`** — live-tested against the actual running dev server: temporarily commented out `GOOGLE_CLIENT_ID` in `server/.env`, killed and restarted the backend (`ts-node-dev`, PID captured via `netstat`/`taskkill`), confirmed a Google login attempt now returns `500 "Google login is not configured"`. Restored the env var, restarted again, confirmed normal behavior (`400 "Google authentication failed"` for a fake token — Google's own verification failing, not the config guard).
+
+#### Image validation refined after lecturer's detailed written explanation
+Lecturer sent a fuller explanation of Level A (`Joi.string().uri()` only) vs. Level B (Cloudinary-domain-restricted), with his own example code including `Joi.string().uri({ scheme: ['https'] }).pattern(/^https:\/\/res\.cloudinary\.com\//)`. Compared against our implementation:
+- Our cloud-name-specific check (`.../dm0dy48um/...`) is already *stricter* than his example, which only checks the bare `res.cloudinary.com` domain — no change needed there.
+- We were missing his `.uri({ scheme: ['https'] })` structural check, which rejects malformed strings (stray spaces, control characters) even if they happen to share the right domain prefix. Discussed the tradeoff (cheap to add, no legitimate case it would break) and added it.
+- A separate suggestion (from another AI tool Shani consulted) to duplicate the Cloudinary check inside `lessonController.ts`'s `createLesson`/`updateLesson` was evaluated and rejected: both routes already run `validate(createLessonSchema)` before the controller executes, so the duplicate check could never fire (dead code), and its proposed regex (domain-only, no cloud name) was weaker than what's already enforced.
+- `server/validation/lessonValidation.ts` — added `.uri({ scheme: ['https'] })` ahead of the existing `.custom()` cloud-name check; discovered the scheme-mismatch error uses Joi's `string.uriCustomScheme` code (not `string.uri`) and added that message mapping too, otherwise it silently fell back to Joi's default English text.
+- Verified live with 4 cases via a temporary QA account (deleted after, along with its 2 successfully-created test lessons): empty image → 201; valid Cloudinary URL → 201; well-formed-prefix-but-malformed URI (embedded space + `<script>`) → 400 Hebrew message; other domain → 400 Hebrew message. `tsc --noEmit` clean.
+
+#### Docs
+Updated PROGRESS.md: API endpoint table, "Image Upload Flow" known-gaps section, "Still To Do" list (moved items 4-6 from pending to done), and item 6's description to reflect the `.uri()` refinement.
