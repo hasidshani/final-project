@@ -4,16 +4,135 @@ import Layout from '../components/Layout';
 import StatCard from '../components/StatCard';
 import { useAuth } from '../context/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
+import { useMatchRequests } from '../hooks/useMatchRequests';
+import type { MatchRequest } from '../hooks/useMatchRequests';
 import type { Lesson } from '../store/lessonsSlice';
+import api from '../services/api';
 
-type Tab = 'joined' | 'created' | 'favorites' | 'past';
+type Tab = 'joined' | 'created' | 'favorites' | 'past' | 'match';
 
 const TABS: { key: Tab; label: string }[] = [
     { key: 'joined',    label: 'שיעורים שנרשמתי' },
     { key: 'created',   label: 'השיעורים שלי' },
     { key: 'favorites', label: 'שמורים' },
     { key: 'past',      label: 'שיעורים שעברו' },
+    { key: 'match',     label: 'בקשות היכרות' },
 ];
+
+// Opt-in toggle for the match-request feature — lives at the top of the Dashboard
+// since there's no dedicated profile/settings page in the app.
+function MatchPreferenceCard() {
+    const { user, updateUser } = useAuth();
+    const [saving, setSaving] = useState(false);
+    const [error, setError]   = useState('');
+
+    const toggle = async () => {
+        setSaving(true);
+        setError('');
+        const next = !user?.openToMatch;
+        try {
+            await api.patch('/users/match-preference', { openToMatch: next });
+            updateUser({ openToMatch: next });
+        } catch {
+            setError('שגיאה בעדכון ההעדפה');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="card border-0 shadow-sm mb-4">
+            <div className="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div className="text-end">
+                    <h6 className="fw-bold mb-1">🤝 פתיחות להיכרויות</h6>
+                    <p className="text-muted small mb-0">
+                        כשאתה לוחץ על פעיל, משתתפים אחרים ששותפים איתך לשיעורים (שגם פתוחים להיכרויות) יוכלו לבקש ליצור איתך קשר ותוכלו להכיר.
+                    </p>
+                    {error && <p className="text-danger small mb-0 mt-1">{error}</p>}
+                </div>
+                <button
+                    className={`btn btn-sm fw-bold ${user?.openToMatch ? 'btn-success' : 'btn-outline-secondary'}`}
+                    onClick={toggle}
+                    disabled={saving}
+                >
+                    {user?.openToMatch ? '✅ פעיל' : 'לא פעיל'}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function MatchRequestRow({ request, mode, onRespond }: {
+    request: MatchRequest;
+    mode: 'incoming' | 'outgoing' | 'accepted';
+    onRespond: (id: string, status: 'accepted' | 'declined') => Promise<void>;
+}) {
+    const [responding, setResponding] = useState(false);
+
+    const respond = async (status: 'accepted' | 'declined') => {
+        setResponding(true);
+        try { await onRespond(request._id, status); } finally { setResponding(false); }
+    };
+
+    const other = mode === 'incoming' ? request.from : request.to;
+
+    return (
+        <div className="d-flex justify-content-between align-items-start py-3 border-bottom text-end">
+            <div>
+                <h6 className="fw-bold mb-1">{other.name}</h6>
+                <p className="text-muted small mb-1">שיתוף שיעור: {request.lesson.title}</p>
+                {request.note && <p className="small mb-1 fst-italic">"{request.note}"</p>}
+                {mode === 'accepted' && <p className="small mb-0">📞 {other.phone}</p>}
+            </div>
+            {mode === 'incoming' && (
+                <div className="d-flex gap-2">
+                    <button className="btn btn-sm btn-success" onClick={() => respond('accepted')} disabled={responding}>אשר</button>
+                    <button className="btn btn-sm btn-outline-secondary" onClick={() => respond('declined')} disabled={responding}>דחה</button>
+                </div>
+            )}
+            {mode === 'outgoing' && <span className="badge bg-light text-dark border">ממתין לתשובה</span>}
+        </div>
+    );
+}
+
+function MatchRequestsPanel({ incoming, outgoing, accepted, loading, error, respond }: {
+    incoming: MatchRequest[];
+    outgoing: MatchRequest[];
+    accepted: MatchRequest[];
+    loading: boolean;
+    error: string;
+    respond: (id: string, status: 'accepted' | 'declined') => Promise<void>;
+}) {
+    if (loading) return <p className="text-center text-muted py-3">טוען...</p>;
+    if (error)   return <p className="text-center text-danger py-3">{error}</p>;
+
+    if (incoming.length === 0 && outgoing.length === 0 && accepted.length === 0) {
+        return <p className="text-center text-muted py-3">אין בקשות היכרות כרגע</p>;
+    }
+
+    return (
+        <div>
+            {incoming.length > 0 && (
+                <>
+                    <h6 className="fw-bold text-end mb-2">בקשות שהתקבלו</h6>
+                    {incoming.map(r => <MatchRequestRow key={r._id} request={r} mode="incoming" onRespond={respond} />)}
+                </>
+            )}
+            {outgoing.length > 0 && (
+                <>
+                    <h6 className="fw-bold text-end mb-2 mt-4">בקשות שנשלחו</h6>
+                    {outgoing.map(r => <MatchRequestRow key={r._id} request={r} mode="outgoing" onRespond={respond} />)}
+                </>
+            )}
+            {accepted.length > 0 && (
+                <>
+                    <h6 className="fw-bold text-end mb-2 mt-4">אנשי קשר</h6>
+                    {accepted.map(r => <MatchRequestRow key={r._id} request={r} mode="accepted" onRespond={respond} />)}
+                </>
+            )}
+        </div>
+    );
+}
 
 const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('he-IL', {
@@ -79,6 +198,10 @@ function LessonRow({ lesson, onDelete, onLeave }: { lesson: Lesson; onDelete?: (
 function Dashboard() {
     const { user } = useAuth();
     const { loading, error, joinedLessons, createdLessons, favoriteLessons, pastLessons, deleteLesson, leaveLesson } = useDashboard();
+    const {
+        incoming: incomingRequests, outgoing: outgoingRequests, accepted: acceptedRequests,
+        loading: matchLoading, error: matchError, respond: respondMatchRequest,
+    } = useMatchRequests();
     const [activeTab, setActiveTab] = useState<Tab>('joined');
 
     const counts: Record<Tab, number> = {
@@ -86,13 +209,15 @@ function Dashboard() {
         created:   createdLessons.length,
         favorites: favoriteLessons.length,
         past:      pastLessons.length,
+        match:     incomingRequests.length,
     };
 
     const displayedLessons =
         activeTab === 'joined'    ? joinedLessons :
         activeTab === 'created'   ? createdLessons :
         activeTab === 'favorites' ? favoriteLessons :
-                                    pastLessons;
+        activeTab === 'past'      ? pastLessons :
+                                    [];
 
     if (loading) return <Layout><p className="text-center mt-5">טוען...</p></Layout>;
     if (error)   return <Layout><p className="text-center mt-5 text-danger">{error}</p></Layout>;
@@ -105,6 +230,8 @@ function Dashboard() {
                     <h1 className="fw-bold mb-1">לוח בקרה</h1>
                     <p className="text-muted">שלום, {user?.name}</p>
                 </div>
+
+                <MatchPreferenceCard />
 
                 {/* Stat cards — reusable component with props */}
                 <div className="row g-3 mb-4">
@@ -140,9 +267,18 @@ function Dashboard() {
                         </ul>
                     </div>
 
-                    {/* Lesson list — LessonRow component + .map() */}
+                    {/* Lesson list — LessonRow component + .map() — or the match-requests panel */}
                     <div className="card-body p-4">
-                        {displayedLessons.length === 0 ? (
+                        {activeTab === 'match' ? (
+                            <MatchRequestsPanel
+                                incoming={incomingRequests}
+                                outgoing={outgoingRequests}
+                                accepted={acceptedRequests}
+                                loading={matchLoading}
+                                error={matchError}
+                                respond={respondMatchRequest}
+                            />
+                        ) : displayedLessons.length === 0 ? (
                             <p className="text-center text-muted py-3">אין שיעורים להצגה</p>
                         ) : (
                             displayedLessons.map(lesson => {

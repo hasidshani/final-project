@@ -7,6 +7,7 @@ import usersRoutes from './routes/users_routes';
 import lessonsRoutes from './routes/lessons_routes';
 import commentsRoutes from './routes/comments_routes';
 import fileRoutes from './routes/file_routes';
+import matchRequestsRoutes from './routes/matchRequests_routes';
 
 import logger from './middleware/logger';
 import globalErrorHandler from './middleware/errorHandler';
@@ -50,6 +51,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/lessons', lessonsRoutes);
 app.use('/api/comments', commentsRoutes);
 app.use('/api/file', fileRoutes);
+app.use('/api/matchrequests', matchRequestsRoutes);
 
 // Global error handler — must be last
 app.use(globalErrorHandler);

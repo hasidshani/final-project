@@ -20,6 +20,16 @@ const CATEGORIES = [
     { name: 'פרשת שבוע', icon: '📖', bg: '#FFFDE7' },
 ];
 
+// Filler images for the hero's scrolling photo strip — used to round out
+// the strip when there aren't yet enough real lesson photos in the DB.
+const STOCK_HERO_IMAGES = [
+    'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1490127252417-7c393f993ee4?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=800&auto=format&fit=crop',
+];
+
 function Home() {
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
@@ -37,6 +47,16 @@ function Home() {
         [lessons]
     );
 
+    // Real lesson photos first, topped up with stock images when there aren't
+    // enough yet, then duplicated once so the CSS marquee loops seamlessly.
+    const heroImages = useMemo(() => {
+        const realImages = [...new Set(lessons.map(l => l.image).filter(Boolean))];
+        const combined = [...realImages, ...STOCK_HERO_IMAGES];
+        while (combined.length < 8) combined.push(...STOCK_HERO_IMAGES);
+        const trimmed = combined.slice(0, 12);
+        return [...trimmed, ...trimmed];
+    }, [lessons]);
+
     const handleCategoryClick = (cat: string) => {
         dispatch(setCategoryFilter(cat));
         navigate('/alllessons');
@@ -45,28 +65,36 @@ function Home() {
     return (
         <Layout>
 
-            {/* ── Hero ── */}
-            <section className="py-5 text-center bg-white border-bottom">
-                <div className="container py-3">
-                    <span
-                        className="badge rounded-pill border fs-6 px-3 py-2 mb-4 fw-normal"
-                        style={{ background: '#E9E5D9', color: '#1a1a1a' }}
-                    >
-                        אורייתא ✡
-                    </span>
-                    <h1 className="display-4 fw-bold mb-3">
-                        שיעורי תורה
-                        <br />
-                        <span style={{ color: '#D4A373' }}>ליד הבית</span>
-                    </h1>
-                    <p className="lead text-muted mx-auto mb-4" style={{ maxWidth: 560 }}>
+            {/* ── Hero — scrolling photo strip behind the title ── */}
+            <section className="hero-section text-center">
+                <div className="hero-marquee" aria-hidden="true">
+                    <div className="hero-marquee-track">
+                        {heroImages.map((src, i) => (
+                            <img
+                                key={i}
+                                src={src}
+                                alt=""
+                                loading={i < 12 ? 'eager' : 'lazy'}
+                                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                        ))}
+                    </div>
+                </div>
+                <div className="hero-overlay" />
+
+                <div className="hero-content container py-3">
+                    <h1 className="hero-wordmark mb-2">אורייתא ✡</h1>
+                    <p className="fs-3 fw-bold mb-3" style={{ color: '#FFF7EC' }}>
+                        שיעורי תורה <span style={{ color: 'var(--gold)' }}>ליד הבית</span>
+                    </p>
+                    <p className="lead mx-auto mb-4" style={{ maxWidth: 560, color: '#f1ede4' }}>
                         התחברו למורי תורה מקומיים, גלו שיעורים מעוררי השראה והצטרפו לקהילת הלמידה שלנו.
                     </p>
                     <div className="d-flex justify-content-center gap-3 flex-wrap">
-                        <Link to="/alllessons" className="btn btn-dark px-4 py-2 fw-bold">
+                        <Link to="/alllessons" className="btn btn-gold px-4 py-2 fw-bold">
                             גלו שיעורים →
                         </Link>
-                        <Link to="/register" className="btn btn-outline-dark px-4 py-2 fw-bold">
+                        <Link to="/register" className="btn btn-outline-light px-4 py-2 fw-bold">
                             הצטרפו בחינם
                         </Link>
                     </div>

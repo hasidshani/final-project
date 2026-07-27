@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-interface LessonCreator { _id: string; name: string; email: string; phone?: string; }
-interface Participant   { _id: string; name: string; phone?: string; }
+interface LessonCreator { _id: string; name: string; email: string; }
+interface Participant   { _id: string; name: string; openToMatch?: boolean; }
 
 export interface SingleLessonData {
     _id: string;

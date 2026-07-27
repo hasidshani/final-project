@@ -5,8 +5,112 @@ import CommentCard from '../components/CommentCard';
 import { useAuth } from '../context/AuthContext';
 import { useSingleLesson } from '../hooks/useSingleLesson';
 import { useComments } from '../hooks/useComments';
+import { useMatchRequests } from '../hooks/useMatchRequests';
+import type { MatchRequest } from '../hooks/useMatchRequests';
 
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=1200&auto=format&fit=crop';
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1200&auto=format&fit=crop';
+
+type ParticipantInfo = { _id: string; name: string; openToMatch?: boolean };
+
+// One row in the participants list — handles its own request/respond UI so
+// the page component doesn't have to track per-row state.
+function ParticipantRow({
+    participant, lessonId, currentUserId, isSelf, relation, canRequest, onSend, onRespond,
+}: {
+    participant: ParticipantInfo;
+    lessonId: string;
+    currentUserId?: string;
+    isSelf: boolean;
+    relation?: MatchRequest;
+    canRequest: boolean;
+    onSend: (toUserId: string, lessonId: string, note: string) => Promise<void>;
+    onRespond: (id: string, status: 'accepted' | 'declined') => Promise<void>;
+}) {
+    const [composing, setComposing] = useState(false);
+    const [note, setNote] = useState('');
+    const [sending, setSending] = useState(false);
+    const [responding, setResponding] = useState(false);
+    const [rowError, setRowError] = useState('');
+
+    const handleSend = async () => {
+        setSending(true);
+        setRowError('');
+        try {
+            await onSend(participant._id, lessonId, note);
+            setComposing(false);
+            setNote('');
+        } catch (err: any) {
+            setRowError(err.response?.data?.message || 'שגיאה בשליחת הבקשה');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const handleRespond = async (status: 'accepted' | 'declined') => {
+        if (!relation) return;
+        setResponding(true);
+        setRowError('');
+        try {
+            await onRespond(relation._id, status);
+        } catch {
+            setRowError('שגיאה בעדכון הבקשה');
+        } finally {
+            setResponding(false);
+        }
+    };
+
+    let leftContent: React.ReactNode = null;
+
+    if (isSelf) {
+        leftContent = <span className="small text-muted">(את/ה)</span>;
+    } else if (relation?.status === 'accepted') {
+        const phone = relation.from._id === participant._id ? relation.from.phone : relation.to.phone;
+        leftContent = <span className="small text-muted">📞 {phone}</span>;
+    } else if (relation?.status === 'pending' && relation.from._id === currentUserId) {
+        leftContent = <span className="small text-muted">ממתין/ה לתשובה</span>;
+    } else if (relation?.status === 'pending' && relation.to._id === currentUserId) {
+        leftContent = (
+            <div className="d-flex gap-1">
+                <button className="btn btn-sm btn-success" onClick={() => handleRespond('accepted')} disabled={responding}>אשר</button>
+                <button className="btn btn-sm btn-outline-secondary" onClick={() => handleRespond('declined')} disabled={responding}>דחה</button>
+            </div>
+        );
+    } else if (canRequest) {
+        leftContent = composing ? (
+            <div className="d-flex flex-column gap-1 text-end" style={{ minWidth: 260 }}>
+                <textarea
+                    className="form-control form-control-sm"
+                    placeholder="הודעה קצרה (לא חובה)"
+                    value={note}
+                    maxLength={200}
+                    rows={3}
+                    onChange={e => setNote(e.target.value)}
+                />
+                <span className="text-muted" style={{ fontSize: '0.75rem' }}>{note.length}/200</span>
+                <div className="d-flex gap-1 justify-content-end">
+                    <button className="btn btn-sm btn-dark" onClick={handleSend} disabled={sending}>
+                        {sending ? 'שולח...' : 'שליחה'}
+                    </button>
+                    <button className="btn btn-sm btn-outline-secondary" onClick={() => setComposing(false)}>ביטול</button>
+                </div>
+            </div>
+        ) : (
+            <button className="btn btn-sm btn-outline-dark" onClick={() => setComposing(true)}>
+                🤝 בקש ליצור קשר
+            </button>
+        );
+    }
+
+    return (
+        <li className="list-group-item text-end px-0">
+            <div className="d-flex justify-content-between align-items-center">
+                {leftContent}
+                <span className="fw-semibold small">{participant.name}</span>
+            </div>
+            {rowError && <div className="text-danger small mt-1">{rowError}</div>}
+        </li>
+    );
+}
 
 function SingleLesson() {
     const { id } = useParams<{ id: string }>();
@@ -21,6 +125,7 @@ function SingleLesson() {
     } = useSingleLesson(id);
 
     const { comments, commentText, setCommentText, commentError, addComment } = useComments(id);
+    const { requests: matchRequests, sendRequest: sendMatchRequest, respond: respondMatchRequest } = useMatchRequests();
 
     if (loading) return <Layout><div className="text-center p-5">טוען שיעור...</div></Layout>;
     if (error || !lesson) return <Layout><div className="text-center p-5">{error || 'השיעור לא נמצא'}</div></Layout>;
@@ -237,12 +342,32 @@ function SingleLesson() {
                                     </h6>
                                     <ul className="list-group list-group-flush">
                                         {lesson.participants.map(p => (
-                                            <li key={p._id} className="list-group-item d-flex justify-content-between text-end px-0">
-                                                <span className="small text-muted">{p.phone ? `📞 ${p.phone}` : ''}</span>
-                                                <span className="fw-semibold small">{p.name}</span>
-                                            </li>
+                                            <ParticipantRow
+                                                key={p._id}
+                                                participant={p}
+                                                lessonId={lesson._id}
+                                                currentUserId={user?._id}
+                                                isSelf={p._id === user?._id}
+                                                relation={isParticipant ? matchRequests.find(r =>
+                                                    (r.from._id === user?._id && r.to._id === p._id) ||
+                                                    (r.from._id === p._id && r.to._id === user?._id)
+                                                ) : undefined}
+                                                canRequest={
+                                                    isParticipant &&
+                                                    p._id !== user?._id &&
+                                                    !!user?.openToMatch &&
+                                                    !!p.openToMatch
+                                                }
+                                                onSend={sendMatchRequest}
+                                                onRespond={respondMatchRequest}
+                                            />
                                         ))}
                                     </ul>
+                                    {isParticipant && !user?.openToMatch && (
+                                        <p className="small text-muted text-end mt-3 mb-0">
+                                            רוצים ליצור קשר עם משתתפים אחרים? הפעילו את האפשרות בלוח הבקרה.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 

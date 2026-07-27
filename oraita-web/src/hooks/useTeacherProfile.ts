@@ -4,11 +4,12 @@ import type { Lesson } from '../store/lessonsSlice';
 import { isLessonUpcoming } from '../utils/lessonDate';
 
 /**
- * Fetches all future lessons for a specific teacher.
- * Also computes derived stats: avgRating, cities list.
+ * Fetches all lessons for a specific teacher, split into upcoming and past.
+ * Also computes derived stats: avgRating (across all their lessons, since
+ * only past lessons can carry a rating), cities list.
  */
 export function useTeacherProfile(teacherId: string | undefined) {
-    const [lessons, setLessons] = useState<Lesson[]>([]);
+    const [allLessons, setAllLessons] = useState<Lesson[]>([]);
     const [loading, setLoading] = useState(true);
     const [error,   setError]   = useState('');
 
@@ -17,26 +18,43 @@ export function useTeacherProfile(teacherId: string | undefined) {
         api.get('/lessons')
             .then(res => {
                 const all: Lesson[] = res.data.lessons ?? [];
-                setLessons(
-                    all.filter(l => l.creator._id === teacherId && isLessonUpcoming(l))
-                );
+                setAllLessons(all.filter(l => l.creator._id === teacherId));
             })
             .catch(() => setError('שגיאה בטעינת הנתונים'))
             .finally(() => setLoading(false));
     }, [teacherId]);
 
-    const creatorName = lessons[0]?.creator.name ?? '';
+    const upcomingLessons = useMemo(
+        () => allLessons.filter(isLessonUpcoming),
+        [allLessons]
+    );
+
+    const pastLessons = useMemo(
+        () => allLessons.filter(l => !isLessonUpcoming(l)),
+        [allLessons]
+    );
+
+    const creatorName = allLessons[0]?.creator.name ?? '';
 
     const cities = useMemo(
-        () => [...new Set(lessons.map(l => l.city))].join(', '),
-        [lessons]
+        () => [...new Set(allLessons.map(l => l.city))].join(', '),
+        [allLessons]
     );
 
     const avgRating = useMemo(() => {
-        const rated = lessons.filter(l => l.rating > 0);
+        const rated = allLessons.filter(l => l.rating > 0);
         if (rated.length === 0) return null;
         return (rated.reduce((sum, l) => sum + l.rating, 0) / rated.length).toFixed(1);
-    }, [lessons]);
+    }, [allLessons]);
 
-    return { lessons, loading, error, creatorName, cities, avgRating };
+    return {
+        upcomingLessons,
+        pastLessons,
+        loading,
+        error,
+        creatorName,
+        cities,
+        avgRating,
+        totalCount: allLessons.length,
+    };
 }

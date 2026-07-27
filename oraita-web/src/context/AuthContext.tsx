@@ -8,6 +8,7 @@ interface AuthUser {
     name: string;
     email: string;
     phone?: string;
+    openToMatch?: boolean;
     favorites?: string[];
 }
 
@@ -17,6 +18,8 @@ interface AuthContextType {
     login: (userData: AuthUser, accessToken: string, refreshToken: string) => void;
     logout: () => void;
     updateUser: (updates: Partial<AuthUser>) => void;
+    pendingMatchCount: number;
+    refreshMatchCount: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -24,6 +27,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [loading, setLoading] = useState(true);
+    const [pendingMatchCount, setPendingMatchCount] = useState(0);
 
     // On app load — check if a token exists and restore the session
     useEffect(() => {
@@ -40,6 +44,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
             .finally(() => setLoading(false));
     }, []);
+
+    // Fetch the pending-incoming-match-requests count once per session (not
+    // per page navigation — this used to live in Navbar, which remounts on
+    // every route change and was hammering the API on every click).
+    const refreshMatchCount = () => {
+        if (!user) { setPendingMatchCount(0); return; }
+        api.get('/matchrequests/me')
+            .then((res) => {
+                const count = (res.data.requests ?? []).filter(
+                    (r: any) => r.to._id === user._id && r.status === 'pending'
+                ).length;
+                setPendingMatchCount(count);
+            })
+            .catch(() => {});
+    };
+
+    useEffect(() => {
+        refreshMatchCount();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?._id]);
 
     const login = (userData: AuthUser, accessToken: string, refreshToken: string) => {
         localStorage.setItem('accessToken', accessToken);
@@ -63,11 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             setUser(null);
+            setPendingMatchCount(0);
         }
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, updateUser, pendingMatchCount, refreshMatchCount }}>
             {children}
         </AuthContext.Provider>
     );

@@ -13,7 +13,7 @@ type LessonCardProps = {
     image: string;
 };
 
-const FALLBACK = 'https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=400&auto=format&fit=crop';
+const FALLBACK = 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=400&auto=format&fit=crop';
 
 // memo prevents re-render when parent re-renders but props haven't changed
 const LessonCard = memo(function LessonCard({

@@ -12,6 +12,7 @@ const FOOTER_LINKS = [
         heading: 'ניווט',
         links: [
             { to: '/',           label: 'דף הבית' },
+            { to: '/about',      label: 'אודות' },
             { to: '/alllessons', label: 'כל השיעורים' },
         ],
     },

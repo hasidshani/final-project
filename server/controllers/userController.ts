@@ -198,6 +198,8 @@ export const loginUser = async (
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                phone: user.phone,
+                openToMatch: user.openToMatch,
                 favorites: user.favorites
             }
         });
@@ -566,7 +568,7 @@ export const googleSignin = async (req: Request, res: Response) => {
             success: true,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, favorites: user.favorites },
+            user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, openToMatch: user.openToMatch, favorites: user.favorites },
         });
     } catch (err) {
         return res.status(400).json({ success: false, message: 'Google authentication failed' });
@@ -591,6 +593,33 @@ export const updatePhone = async (req: Request, res: Response) => {
         return res.status(200).json({
             success: true,
             user: { _id: user._id, name: user.name, email: user.email, phone: user.phone },
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+// Update the logged-in user's match-request opt-in preference
+export const updateMatchPreference = async (req: Request, res: Response) => {
+    const userId = req.userId as string;
+    const { openToMatch } = req.body;
+
+    try {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        user.openToMatch = openToMatch;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            user: { _id: user._id, name: user.name, email: user.email, openToMatch: user.openToMatch },
         });
     } catch (error) {
         return res.status(400).json({

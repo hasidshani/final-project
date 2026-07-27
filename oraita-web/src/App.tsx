@@ -11,6 +11,7 @@ const CreateLesson  = lazy(() => import('./pages/CreateLesson'));
 const AllLessons    = lazy(() => import('./pages/AllLessons'));
 const SingleLesson  = lazy(() => import('./pages/SingleLesson'));
 const TeacherProfile = lazy(() => import('./pages/TeacherProfile'));
+const About          = lazy(() => import('./pages/AboutPage'));
 const NotFound      = lazy(() => import('./pages/NotFound'));
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
                     <Route path="/alllessons" element={<AllLessons />} />
                     <Route path="/lesson/:id" element={<SingleLesson />} />
                     <Route path="/teacherprofile/:id" element={<TeacherProfile />} />
+                    <Route path="/about" element={<About />} />
 
                     {/* Protected routes — require login */}
                     <Route path="/dashboard" element={

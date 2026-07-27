@@ -147,6 +147,7 @@ Base URL: `http://localhost:3000/api`
 | POST | `/refresh` | ❌ | Get new access token |
 | POST | `/google` | ❌ | Google Sign-In — verifies credential, finds/creates user, returns tokens (+ phone + favorites) |
 | PATCH | `/phone` | ✅ | Update logged-in user's phone number (used by the post-Google-login "add phone?" prompt) |
+| PATCH | `/match-preference` | ✅ | Toggle `openToMatch` — opts the user in/out of the match-request feature |
 | POST | `/favorites/:lessonId` | ✅ | Add lesson to favorites |
 | DELETE | `/favorites/:lessonId` | ✅ | Remove lesson from favorites |
 
@@ -155,7 +156,7 @@ Base URL: `http://localhost:3000/api`
 |--------|-------|------|-------------|
 | GET | `/` | ❌ | Get all lessons (creator populated) |
 | POST | `/` | ✅ | Create lesson — JSON body (image is a URL string, not a file) |
-| GET | `/:id` | ❌ | Get single lesson (creator + participants populated, includes ratings array) |
+| GET | `/:id` | ❌ | Get single lesson (creator + participants populated, includes ratings array). Participants are populated with `name email openToMatch` only — phone numbers are never sent on this public route; they're only ever revealed via an accepted match request (see below) |
 | POST | `/:id/join` | ✅ | Join lesson (checks capacity) |
 | DELETE | `/:id/join` | ✅ | Cancel registration (leave lesson) — validates user is a participant |
 | POST | `/:id/rate` | ✅ | Rate lesson 1-5 stars — participants only, only after lesson date has passed; updates or replaces existing rating, recomputes average |
@@ -174,6 +175,13 @@ Base URL: `http://localhost:3000/api`
 | POST | `/:lessonId` | ✅ | Add comment |
 | DELETE | `/:id` | ✅ | Delete comment (owner only) |
 
+### Match Requests (`/api/matchrequests`) — the "unique feature"
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| GET | `/me` | ✅ | Get all match requests (sent or received) for the logged-in user. Phone numbers of `from`/`to` are stripped from the response unless `status === 'accepted'` |
+| POST | `/:toUserId` | ✅ | Send a match request to another participant, scoped to a specific `lessonId` (in body, + optional `note` ≤200 chars). Requires: not self, both users have `openToMatch: true`, both are participants of that lesson, and no existing pending/accepted request already exists between the pair |
+| PATCH | `/:id` | ✅ | Accept or decline a request (`{ status: 'accepted' \| 'declined' }`) — recipient only |
+
 ### Static files
 | Path | Description |
 |------|-------------|
@@ -191,7 +199,7 @@ Authorization: Bearer <accessToken>
 
 ### User
 ```ts
-{ name, email, password (bcrypt), phone?, favorites: [ObjectId→Lesson], refreshTokens: [string], timestamps }
+{ name, email, password (bcrypt), phone?, openToMatch (default false), favorites: [ObjectId→Lesson], refreshTokens: [string], timestamps }
 ```
 
 ### Lesson
@@ -206,6 +214,12 @@ Valid cities: `נתניה | פרדס חנה`
 ```ts
 { lesson: ObjectId→Lesson, user: ObjectId→User, text, timestamps }
 ```
+
+### MatchRequest — new, 4th collection
+```ts
+{ from: ObjectId→User, to: ObjectId→User, lesson: ObjectId→Lesson, note (≤200 chars, optional), status: 'pending' | 'accepted' | 'declined', timestamps }
+```
+One request per ordered pair while pending/accepted (enforced in the controller, not a unique index — a new request can be created again after a decline).
 
 ---
 
@@ -258,6 +272,16 @@ VITE_API_URL=http://localhost:3000/api
 
 ## Current State
 
+### ✅ Everything Working (as of 2026-07-27 — visual design pass)
+- **New public About page** (`/about`, reachable from Navbar + Footer, no login required) — Shani's personal introduction to the site, word-for-word, with a photo banner (her own uploaded photo, not stock) and a gold double-frame around the text card. Full detail in Session 13.
+- **Homepage hero redesign** — large "אורייתא" wordmark, continuously scrolling background photo strip mixing real lesson photos with stock filler, dark-to-gold overlay for readability. Also fixed a pre-existing dead fallback-image URL (404) used across `LessonCard`/`SingleLesson`.
+- **Nav order** — Navbar/Footer public links now read דף הבית → אודות → כל השיעורים.
+
+### ✅ Everything Working (as of 2026-07-27 — "unique feature")
+- **Match requests ("unique feature" for the lecturer)** — TeacherProfile now shows a teacher's past lessons too (see below), and participants of a shared lesson who are both opted in (`openToMatch`) can request to connect; the recipient accepts/declines from a new Dashboard tab; phone numbers are only ever revealed after acceptance. Full design context in Session 12.
+- **Fixed a real privacy bug found while designing the above** — `GET /api/lessons/:id` (a public, unauthenticated route) used to return every participant's phone number to anyone who loaded the page, logged in or not. Participants are now populated with `name email openToMatch` only; phone numbers are exclusively delivered via `GET /api/matchrequests/me`, and only for accepted requests.
+- **TeacherProfile now shows past lessons** — new "שיעורים קודמים" tab (alongside "שיעורים קרובים"), so a teacher's star ratings (which can only exist on past lessons) are actually visible somewhere. Previously the page filtered to upcoming-only, which meant the "⭐ דירוג ממוצע" badge could never have data.
+
 ### ✅ Everything Working (as of 2026-07-07)
 - **Edit lesson (creator only)** — new `PATCH /api/lessons/:id` route + `updateLesson` controller (creator-only, same 403 pattern as delete); `CreateLesson.tsx` now doubles as an edit form at `/editlesson/:id` (fetches + prefills the lesson, redirects non-creators away, skips the past-date guard so a past/already-scheduled lesson can still be edited); "✏️ ערוך שיעור" button added to `SingleLesson.tsx`'s sidebar, visible only to the lesson's creator
 - **Lesson description line breaks** — `SingleLesson.tsx` description `<p>` now has `white-space: pre-wrap`, so newlines the teacher types render as real line breaks instead of being collapsed
@@ -298,10 +322,12 @@ VITE_API_URL=http://localhost:3000/api
 - **Star Rating** — participants can rate a past lesson 1-5 stars; average updates live without page reload
 - **Delete confirmation** — Hebrew inline confirm before deleting a lesson in Dashboard
 
-### ⚠ Still To Do (manual steps only)
-1. **Deploy** — MongoDB Atlas → Render (backend) → Vercel (frontend). See deployment guide below.
-2. **Update README** — replace `_coming soon_` with real live URLs once deployed.
-3. **Mobile responsiveness** — do a quick check on phone after deploy.
+### ⚠ Still To Do
+1. **Deploy** — MongoDB Atlas → Render (backend) → Vercel (frontend). See deployment guide below. The grading rubric requires submission as a live URL, not local-only — this is the largest remaining gap.
+2. **Add screenshots to README** — placeholder section added 2026-07-27; needs real screenshots of HomePage/AllLessons/SingleLesson/Dashboard/CreateLesson before submission.
+3. **Mobile responsiveness** — never verified in an actual browser; do a manual check.
+4. **Delete dead code** — `server/middleware/upload.ts` (old pre-Cloudinary disk-storage Multer config) is unused by any route; safe to delete.
+5. Update README's "Live Demo" URLs once deployed (currently `_coming soon_`).
 
 ### ✅ Lecturer feedback — implemented (2026-07-26)
 
@@ -441,7 +467,7 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 | Category | Points | Status |
 |----------|--------|--------|
 | Backend Architecture | 25 pts | ✅ MVC structure, error handler, middleware chain, no logic in routes |
-| Database Design | 15 pts | ✅ 3 collections, ObjectId refs, required fields, timestamps |
+| Database Design | 15 pts | ✅ 4 collections (Users, Lessons, Comments, MatchRequests), ObjectId refs, required fields, timestamps |
 | Authentication & Security | 20 pts | ✅ bcrypt, JWT + refresh tokens, protected routes, rate limiting, Helmet |
 | Frontend — React & State | 20 pts | ✅ Context API + Redux, custom hooks (`src/hooks/`), components, lazy loading, React.memo, `.map()` lists |
 | UI/UX & Responsiveness | 10 pts | ⚠ Loading/error states ✅ — mobile responsiveness needs manual check |
@@ -451,6 +477,81 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 ---
 
 ## Session Log
+
+### Session 12 (2026-07-27) — TeacherProfile Past Lessons + Match Requests ("Unique Feature")
+
+#### Context
+Lecturer asked for something unique on the project, beyond standard CRUD. Brainstormed with Shani around the site's mixed-gender lesson registration and landed on a lightweight, consent-gated "match request" feature between participants who share a lesson — scoped deliberately small (no bios/photos/profile pages) so it doesn't compete with the lesson platform for focus.
+
+#### TeacherProfile — past lessons now visible
+- While investigating, found that `useTeacherProfile.ts` filtered to upcoming lessons only, and since ratings can only exist on *past* lessons, the "⭐ דירוג ממוצע" badge on a teacher's profile could never actually have data — a real gap between two individually-correct features.
+- `useTeacherProfile.ts` — now fetches all of a teacher's lessons, splits into `upcomingLessons`/`pastLessons`, computes `avgRating` across all lessons (not just what's displayed)
+- `TeacherProfile.tsx` — added a two-tab UI ("שיעורים קרובים" / "שיעורים קודמים"), same pattern as Dashboard's existing tabs
+
+#### Match requests — design
+Considered three options (opt-in visibility only / consent-gated request flow / passive badge only); chose the consent-gated request flow. Resolved the "how do they know anything about each other to decide" question by using data already on hand — name + the specific shared lesson — rather than building new profile fields; added one optional short note (≤200 chars) on the request itself as the only extra surface.
+
+#### Implementation
+- **New 4th collection** `server/models/matchRequests.ts` — `{ from, to, lesson, note, status: pending|accepted|declined, timestamps }`
+- `server/models/users.ts` — new `openToMatch` boolean field (default `false`)
+- `server/controllers/matchRequestController.ts` — `createMatchRequest` (validates: not self, both opted in, both are participants of the given lesson, no existing pending/accepted request between the pair), `respondToMatchRequest` (recipient-only accept/decline), `getMyMatchRequests` (strips phone numbers from the response for any request that isn't `accepted` — this is the only place phone numbers are ever exposed)
+- `server/routes/matchRequests_routes.ts` — `GET /me`, `POST /:toUserId`, `PATCH /:id`, registered at `/api/matchrequests` in `app.ts`
+- `server/controllers/userController.ts` — new `updateMatchPreference`; `openToMatch` (and, incidentally, `phone`, which was missing before) added to the `loginUser`/`googleSignin` response payloads so the Dashboard toggle reflects the right state immediately after login without a refetch
+- `server/routes/users_routes.ts` — new `PATCH /match-preference`
+
+- **Fixed a pre-existing privacy bug found along the way**: `getLessonById`'s participants populate was `'name email phone'` on a fully public, unauthenticated route (`GET /api/lessons/:id`) — meaning any visitor, logged in or not, could see every participant's phone number just by opening a lesson page. Changed to `'name email openToMatch'`; phone numbers now only ever travel through `GET /api/matchrequests/me`, and only for accepted requests.
+
+- `oraita-web/src/hooks/useMatchRequests.ts` (new) — fetches `/matchrequests/me`, exposes `incoming`/`outgoing`/`accepted` + `sendRequest`/`respond`. Explicitly guards against firing for anonymous visitors (`if (!user) return`) — `SingleLesson` is a public page, and the app's Axios response interceptor redirects to `/login` on *any* 401, so an unguarded call here would have silently kicked out logged-out visitors browsing a lesson.
+- `oraita-web/src/pages/SingleLesson.tsx` — new `ParticipantRow` component per participant: shows a "🤝 בקש ליצור קשר" button (with inline optional note) when both sides are opted in and no active request exists; shows accept/decline inline if *they* sent *you* a request; shows "ממתין/ה לתשובה" if you're waiting; shows the phone number only once accepted.
+- `oraita-web/src/pages/Dashboard.tsx` — new `MatchPreferenceCard` (the opt-in toggle, placed here since there's no dedicated profile/settings page) and a new "בקשות היכרות" tab showing incoming (respond), outgoing (pending), and accepted (contacts, with phone) requests
+- `oraita-web/src/context/AuthContext.tsx` — `AuthUser` gets `openToMatch?: boolean`
+
+#### Verified
+`tsc --noEmit` (backend) and `tsc -b` (frontend) both clean. Ran a full scripted end-to-end test against the live dev server with 3 temporary QA accounts (teacher + two participants, all deleted after): lesson participants no longer expose phone in the public lesson fetch ✅; request blocked before opting in ✅; request succeeds once both opted in and sharing a lesson ✅; duplicate pending request rejected ✅; phone hidden while pending ✅; only the recipient can accept/decline (sender attempting to respond → 403) ✅; phone revealed to both sides only after acceptance ✅; request rejected when the two users don't actually share that lesson ✅ (16/16 checks passed).
+
+#### Refinements after Shani tried it live
+Shani tested with her own real accounts (אורי יעקב → שני חסיד) rather than QA throwaways. The request itself worked correctly (confirmed by reading the DB directly — status `pending`, note text intact), but she didn't see it: the feature was always a pull model (check the Dashboard tab), never a chat or SMS, and that wasn't discoverable enough. Discussed the options (real chat, SMS, or a lightweight badge) and deliberately chose the smallest one to avoid the feature growing its own messaging infrastructure.
+- `oraita-web/src/pages/Dashboard.tsx` — `MatchPreferenceCard` copy updated to the exact wording Shani wanted: *"כשאתה לחוץ על מופעל, משתתפים אחרים ששותפים איתך לשיעורים (שגם פתוחים להיכרויות) יוכלו לבקש ליצור איתך קשר ותוכלו להכיר."*
+- `oraita-web/src/pages/SingleLesson.tsx` — the note field on the "בקש ליצור קשר" compose box was a single-line `<input>` that was too small to see what was typed; changed to a 3-row `<textarea>` with a live `x/200` character counter
+- `oraita-web/src/components/Navbar.tsx` — new: the "לוח בקרה" nav link now shows a small red badge with the count of pending *incoming* match requests (via `useMatchRequests()`), visible on every page while logged in. Still no push notifications/chat/SMS — this is just a visible cue to go check the Dashboard, which is the actual gap that caused the confusion (not a bug in the request flow itself)
+- Shani's real pending request (אורי יעקב → שני חסיד, lesson "על תפילה – איך להתחבר באמת") was left as-is in the DB since it's her own real test data, not throwaway QA data
+
+#### Rate limiter tripped again — real regression this time, fixed
+Shani got locked out with `"Too many requests, please try again after 15 minutes."` a second time, from normal browsing (not curl testing). Root cause: the Navbar badge (added earlier this session) called `useMatchRequests()` directly inside `Navbar`, and `Navbar` lives inside `Layout`, which every page mounts fresh — React Router unmounts/remounts the whole tree on each navigation, so the badge was re-fetching `/matchrequests/me` on *every single page click*, on top of React StrictMode's dev-mode double-invoke doubling that again. This was a genuine new source of request volume that didn't exist before the badge.
+- `oraita-web/src/context/AuthContext.tsx` — moved the pending-incoming-count logic here instead: new `pendingMatchCount` state + `refreshMatchCount()`, fetched once per session (effect keyed on `user?._id`, not on every render/mount) since `AuthProvider` wraps the app once, outside the route tree
+- `oraita-web/src/components/Navbar.tsx` — reads `pendingMatchCount` from `useAuth()` instead of calling `useMatchRequests()` itself; zero extra network cost per navigation again, same as before the badge existed
+- `oraita-web/src/hooks/useMatchRequests.ts` — `respond()` now also calls `refreshMatchCount()` from context after a successful accept/decline, so the badge updates immediately without a full reload
+- `server/middleware/rateLimiter.ts` — `apiLimiter.max` raised from 100 → 300 per 15min. Rate limiting itself stays in place (still required by the rubric); 100 was simply too tight for a real user clicking through several pages, each of which independently fires a few authenticated fetches on mount
+- Restarted the local dev server to reset the in-memory limiter counter and unblock the account immediately
+
+#### About page (`/about`) — new public page
+- `oraita-web/src/pages/AboutPage.tsx` (new) — fully public, no `PrivateRoute` wrapper, same tier as the homepage. Renders Shani's personal introduction to the site, word-for-word as she provided it, including the explanation of the match-request feature.
+- `oraita-web/src/App.tsx` — new `/about` route, public
+- `oraita-web/src/components/Navbar.tsx` and `Footer.tsx` — "אודות" link added alongside the other public nav links so the page is actually reachable
+
+### Session 13 (2026-07-27) — Homepage Hero Redesign + About Page Visual Polish
+
+Pure frontend/visual-design session, no backend changes. All changes verified with `tsc -b` (clean throughout) and by confirming both dev servers kept responding 200 after each edit — actual visual review is still pending since the Claude-in-Chrome browser extension has not been connected this session; Shani reviewed everything herself in the browser and gave feedback that drove several of the iterations below.
+
+#### Dashboard copy — final wording
+- `oraita-web/src/pages/Dashboard.tsx` — `MatchPreferenceCard` description corrected twice more (typo, then a wording change) to its final text: *"כשאתה לוחץ על פעיל, משתתפים אחרים ששותפים איתך לשיעורים (שגם פתוחים להיכרויות) יוכלו לבקש ליצור איתך קשר ותוכלו להכיר."*
+
+#### Homepage hero redesign
+Shani asked for the "אורייתא" wordmark to be much larger (it was a small pill badge) and for scrolling background images, "beautiful and high standard" — ideally from real lesson photos rather than generic stock, so the homepage feels like an active platform. Confirmed with her that real photos (13 already exist in Cloudinary) blended with a few stock images as filler was the right call before building it.
+- `oraita-web/src/index.css` — new `.hero-section`/`.hero-marquee`/`.hero-marquee-track`/`.hero-overlay`/`.hero-content`/`.hero-wordmark` classes: a continuously scrolling (70s linear loop, `@keyframes hero-scroll`) horizontal photo strip behind the hero content, dark-to-gold gradient overlay for text contrast, `prefers-reduced-motion` support (disables the animation)
+- `oraita-web/src/pages/HomePage.tsx` — `STOCK_HERO_IMAGES` (5 verified-working Unsplash URLs) mixed with real `lesson.image` values pulled from the already-fetched Redux lessons list, deduplicated, padded to at least 8 images, then duplicated once (`[...trimmed, ...trimmed]`) so the CSS marquee loops seamlessly with no visible seam. "אורייתא ✡" is now a large `h1.hero-wordmark` (`clamp(3.5rem, 9vw, 6.5rem)`) instead of the old small badge; hero text switched to white/light colors and `btn-outline-light`/`btn-gold` buttons since it now sits on a photo background
+- **Bonus bug found and fixed while picking stock image URLs**: the app's existing fallback lesson image (shown whenever a lesson has no uploaded photo) was pointing at a dead Unsplash ID — verified via `curl -I`, it 404s. Was used in `LessonCard.tsx` and `SingleLesson.tsx`. Swapped both to a verified-working URL (same domain/pattern, just a different photo ID).
+
+#### About page — banner, image, and copy polish
+- The "❤️ הרבה מעבר לשיעור תורה..." line was pulled out of the features bullet list into its own larger (`1.35rem`), bold lead-in line directly above "אחד הרעיונות שהיו חשובים לי..." so the two read as one connected thought
+- Removed a comma per Shani's request: "שמי שני, בת 24 והאהבה שלי..." (was "בת 24, והאהבה")
+- Added a static full-width photo banner (`.page-banner`/`.page-banner-content`, reusing the hero's overlay gradient) at the top of the page with the "שלום וברוכים הבאים לאורייתא!" greeting on it in large white text; the letter's text card overlaps the banner slightly (`marginTop: -48px`), mirroring the existing avatar-overlap pattern already used on Teacher Profile
+- Banner image swapped from a generic stock photo to one of Shani's own curated photos: copied `photo-1509021436665-8f07dbf5bf1d.jpg` from her local `תמונות לאתר` folder into `oraita-web/src/assets/about-banner.jpg` and imported it properly through Vite (not an absolute local path, which wouldn't resolve in a browser). Noted but not yet acted on: the source file is ~2.3MB, worth compressing before deployment.
+- Added, then removed per feedback, a decorative frame around the banner title text (`.page-banner-frame` — added and later deleted entirely, both the CSS and the JSX wrapper, once Shani said she didn't want it there)
+- Correctly understood the actual ask — a frame around the **body text card**, not the banner title — and added `.about-card-frame` (thin gold border + a lighter gold outline set outside it, double-frame look) to the card holding the full letter
+
+#### Navigation order
+- `oraita-web/src/components/Navbar.tsx` and `Footer.tsx` — public nav links reordered per Shani's explicit choice to: דף הבית → אודות → כל השיעורים (was Home → All Lessons → About)
 
 ### Session 1
 - Full backend setup: MVC structure, JWT auth, JOI validation, Helmet, rate limiting, global error handler
@@ -638,6 +739,22 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 - `oraita-web/src/pages/SingleLesson.tsx` — "✏️ ערוך שיעור" button in the sidebar, shown only when `user?._id === lesson.creator._id`
 - Verified live via curl against temporary QA accounts (both deleted afterward): non-creator PATCH → 403; creator PATCH → 200 with the multi-line description update persisted and returned correctly on a follow-up GET
 
+### Session 11 (2026-07-27) — Full Rubric Audit + README Rewrite
+
+Shani asked for a full pass against the instructor's official grading guide (`Adv. FullStack - Final Project Guide.pdf`, found alongside the other course PDFs) before continuing to add real content to the live site — not lecturer feedback this time, a self-directed readiness check.
+
+#### Audit findings
+- Cross-checked the actual grading rubric (Backend 25 / DB 15 / Auth 20 / Frontend 20 / UI-UX 10 / Deployment 5 / Git+README 5) against real code and docs, not just PROGRESS.md's own claims.
+- Confirmed live in code: `authLimiter` is genuinely wired to `/register` and `/login` (`server/routes/users_routes.ts`), no `.env` ever committed (`git ls-files` clean), `.env.example` present for both root and frontend, 23 commits with descriptive messages (no single bulk commit).
+- Found `README.md` was significantly stale relative to the actual app: still documented the pre-Cloudinary local-disk Multer upload flow, was missing the Google auth / phone / rating / edit-lesson / leave-lesson / file-upload endpoints, was missing `CLOUDINARY_*` and `GOOGLE_CLIENT_ID` env vars, had no Screenshots section (required by the rubric), and "Live Demo" URLs were still placeholders.
+- Confirmed the two real rubric-scored gaps are: (1) deployment — the rubric explicitly requires submission as a live, functional URL, not local-only — and (2) the README currency gap above. Mobile responsiveness also remains unverified (never checked in a real browser).
+- Also noticed `server/middleware/upload.ts` (old pre-Cloudinary disk-storage Multer config) is dead code, unused by any route — logged as a cleanup item, not yet deleted.
+
+#### README rewrite
+- Rewrote `README.md` end-to-end to match current reality: tech stack now lists Cloudinary (not Multer disk storage) and Google Sign-In; full API endpoint table now includes all 15 routes actually implemented; env var tables include `CLOUDINARY_*` and `GOOGLE_CLIENT_ID`/`VITE_GOOGLE_CLIENT_ID`; data models include the `ratings` array; project structure includes `hooks/`, `utils/`, and all current pages/components.
+- Added a "Screenshots" section (currently a placeholder — real screenshots still need to be captured) and a "Team" section (solo project, matches rubric's "Team Members & Roles" requirement).
+- Left "Live Demo" URLs as `_coming soon_` since deployment hasn't happened yet — will need a follow-up edit once Atlas/Render/Vercel are live.
+
 ### Session 9 (2026-07-13) — Lecturer Feedback Review + Docs Correction
 
 #### Lecturer feedback received
@@ -669,8 +786,9 @@ Two points on the current implementation:
 - Deliberately left 401/token-refresh error text in English — `oraita-web/src/services/api.ts`'s response interceptor handles those silently (clears tokens, redirects to `/login`) and never renders the message as text, so there's no user-facing benefit to translating them
 - Verified live: wrong password, unknown email, missing password, register with a too-short password, and register with a duplicate email all now return Hebrew messages
 
-#### Rate limiter — explained, not a bug
+#### Rate limiter — explained, not a bug (revisited and fixed in Session 12)
 - User hit `"Too many requests, please try again after 15 minutes."` on the All Lessons page — traced to `apiLimiter` in `server/middleware/rateLimiter.ts` (100 requests/15min per IP, applied to all of `/api/*` in `app.ts:46`), tripped by the volume of curl requests used to verify the fixes above against the local dev server. Not a code issue; resets automatically after the time window. Offered to raise the local limit or exempt development mode if it becomes disruptive during testing — no decision made yet.
+- **It happened again from real (non-curl) usage in Session 12** — see that section for the actual fix: `apiLimiter.max` raised to 300, and a genuine bug fixed where `Navbar`'s match-request badge was re-fetching on every single page navigation.
 
 ### Session 10 (2026-07-26 – 2026-07-27) — Lecturer Feedback Items 4-6 Implemented + Verified + Refined
 

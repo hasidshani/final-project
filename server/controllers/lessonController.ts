@@ -135,11 +135,14 @@ export const getLessonById = async (
             )
             .populate(
                 'creator',
-                'name email phone'
+                'name email'
             )
             .populate(
+                // Phone numbers are intentionally excluded here — this route is
+                // public/unauthenticated. Contact info is only ever revealed via
+                // an accepted match request (see matchRequestController).
                 'participants',
-                'name email phone'
+                'name email openToMatch'
             );
 
         if (!lesson) {

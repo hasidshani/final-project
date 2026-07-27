@@ -9,13 +9,14 @@ import {
     addFavorite,
     removeFavorite,
     googleSignin,
-    updatePhone
+    updatePhone,
+    updateMatchPreference
 } from '../controllers/userController';
 
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authLimiter } from '../middleware/rateLimiter';
 import validate from '../middleware/validate';
-import { registerSchema, loginSchema, updatePhoneSchema } from '../validation/userValidation';
+import { registerSchema, loginSchema, updatePhoneSchema, updateMatchPreferenceSchema } from '../validation/userValidation';
 
 const router = express.Router();
 
@@ -39,6 +40,9 @@ router.post('/google', googleSignin);
 
 // Update logged-in user's phone number
 router.patch('/phone', authMiddleware, validate(updatePhoneSchema), updatePhone);
+
+// Update logged-in user's match-request opt-in preference
+router.patch('/match-preference', authMiddleware, validate(updateMatchPreferenceSchema), updateMatchPreference);
 
 // Add lesson to favorites
 router.post('/favorites/:lessonId', authMiddleware, addFavorite);

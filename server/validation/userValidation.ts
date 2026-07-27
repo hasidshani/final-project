@@ -44,3 +44,10 @@ export const updatePhoneSchema = Joi.object({
             'any.required': 'יש להזין מספר טלפון'
         })
 });
+
+export const updateMatchPreferenceSchema = Joi.object({
+    openToMatch: Joi.boolean().required()
+        .messages({
+            'any.required': 'חסר ערך openToMatch'
+        })
+});
