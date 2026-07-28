@@ -13,6 +13,9 @@ export interface IUser extends Document {
     // Whether the user is open to being introduced to other participants
     // they share a lesson with (drives the match-request feature)
     openToMatch: boolean;
+    // Required to enable openToMatch — match requests are only ever offered
+    // between opposite genders (see matchRequestController)
+    gender?: 'זכר' | 'נקבה';
     // Favorite lessons
     favorites: mongoose.Types.ObjectId[];
     // Active refresh tokens
@@ -47,6 +50,12 @@ const userSchema = new Schema<IUser>({
     openToMatch: {
         type: Boolean,
         default: false
+    },
+    // Required to enable openToMatch — match requests are only ever offered
+    // between opposite genders (see matchRequestController)
+    gender: {
+        type: String,
+        enum: ['זכר', 'נקבה']
     },
     // Lessons marked as favorites by the user
     favorites: [{

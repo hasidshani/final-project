@@ -56,6 +56,24 @@ export const createMatchRequest = async (
             });
         }
 
+        // Match requests are only ever offered between opposite genders. Checked
+        // here (not just gated client-side) since openToMatch alone doesn't
+        // guarantee gender was ever set — accounts that opted in before this
+        // field existed won't have one until they revisit their preference.
+        if (!fromUser.gender || !toUser.gender) {
+            return res.status(400).json({
+                success: false,
+                message: 'יש להשלים בחירת מגדר (בן / בת) בלוח הבקרה כדי להשתמש באפשרות זו'
+            });
+        }
+
+        if (fromUser.gender === toUser.gender) {
+            return res.status(400).json({
+                success: false,
+                message: 'ניתן ליצור קשר רק עם משתתפים מהמין השני'
+            });
+        }
+
         const isSharedLesson =
             lesson.participants.some(p => p.toString() === fromId) &&
             lesson.participants.some(p => p.toString() === toId);

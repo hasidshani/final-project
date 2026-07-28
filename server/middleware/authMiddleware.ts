@@ -63,3 +63,38 @@ export const authMiddleware = (
         }
     );
 };
+
+// Optional authentication — for public routes that reveal extra data to
+// logged-in users. Sets req.userId when a valid token is present, but never
+// rejects the request (missing/invalid token just means "anonymous").
+export const optionalAuth = (
+    req: Request,
+    _res: Response,
+    next: NextFunction
+) => {
+
+    const authHeader =
+        req.headers['authorization'];
+
+    const token =
+        authHeader &&
+        authHeader.split(' ')[1];
+
+    if (!token || !process.env.TOKEN_SECRET) {
+        return next();
+    }
+
+    jwt.verify(
+        token,
+        process.env.TOKEN_SECRET,
+        (err, data) => {
+
+            if (!err && data) {
+                req.userId =
+                    (data as TokenPayload).userId;
+            }
+
+            next();
+        }
+    );
+};

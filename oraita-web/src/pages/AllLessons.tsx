@@ -9,7 +9,8 @@ function AllLessons() {
 
     return (
         <Layout>
-            <header className="py-5 bg-white border-bottom text-center">
+            <div className="page-warm-bg">
+            <header className="py-5 border-bottom text-center">
                 <h1 className="fw-bold mb-4">כל השיעורים</h1>
 
                 <div className="d-flex flex-wrap justify-content-center align-items-center gap-2">
@@ -71,6 +72,7 @@ function AllLessons() {
                     </div>
                 )}
             </main>
+            </div>
         </Layout>
     );
 }

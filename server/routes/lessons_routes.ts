@@ -11,7 +11,7 @@ import {
     rateLesson
 } from '../controllers/lessonController';
 
-import { authMiddleware } from '../middleware/authMiddleware';
+import { authMiddleware, optionalAuth } from '../middleware/authMiddleware';
 import validate from '../middleware/validate';
 import { createLessonSchema } from '../validation/lessonValidation';
 
@@ -23,8 +23,9 @@ router.post('/', authMiddleware, validate(createLessonSchema), createLesson);
 // Get all lessons — public
 router.get('/', getAllLessons);
 
-// Get lesson by id — public
-router.get('/:id', getLessonById);
+// Get lesson by id — public, but optionally authenticated: logged-in users
+// see participant names, anonymous visitors only see the count
+router.get('/:id', optionalAuth, getLessonById);
 
 // Join lesson — protected
 router.post('/:id/join', authMiddleware, joinLesson);

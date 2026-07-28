@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 interface LessonCreator { _id: string; name: string; email: string; }
-interface Participant   { _id: string; name: string; openToMatch?: boolean; }
+interface Participant   { _id: string; name: string; openToMatch?: boolean; gender?: 'זכר' | 'נקבה'; }
 
 export interface SingleLessonData {
     _id: string;
@@ -17,6 +17,9 @@ export interface SingleLessonData {
     image: string;
     creator: LessonCreator;
     participants: Participant[];
+    // Always the real count, even when `participants` is empty because the
+    // viewer is anonymous (names/emails are only sent to logged-in requests).
+    participantsCount: number;
     maxParticipants: number;
     rating: number;
     ratings: Array<{ user: string; value: number }>;
@@ -132,7 +135,7 @@ export function useSingleLesson(id: string | undefined) {
         : false;
 
     const isFull = lesson
-        ? lesson.participants.length >= lesson.maxParticipants
+        ? lesson.participantsCount >= lesson.maxParticipants
         : false;
 
     // True when the lesson date has already passed

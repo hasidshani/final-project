@@ -127,23 +127,34 @@ export const getLessonById = async (
     const lessonId =
         req.params.id;
 
+    // Route is public, but req.userId is set when a valid token was sent
+    // (see optionalAuth) — participant identities are gated on that.
+    const isAuthenticated =
+        !!req.userId;
+
     try {
 
+        let query =
+            Lesson.findById(lessonId)
+                .populate(
+                    'creator',
+                    'name email'
+                );
+
+        if (isAuthenticated) {
+            query =
+                query.populate(
+                    // Phone numbers are intentionally excluded here — contact
+                    // info is only ever revealed via an accepted match request
+                    // (see matchRequestController). Gender is needed client-side
+                    // to only offer the "create contact" button across genders.
+                    'participants',
+                    'name email openToMatch gender'
+                );
+        }
+
         const lesson =
-            await Lesson.findById(
-                lessonId
-            )
-            .populate(
-                'creator',
-                'name email'
-            )
-            .populate(
-                // Phone numbers are intentionally excluded here — this route is
-                // public/unauthenticated. Contact info is only ever revealed via
-                // an accepted match request (see matchRequestController).
-                'participants',
-                'name email openToMatch'
-            );
+            await query;
 
         if (!lesson) {
             return res.status(404).json({
@@ -153,9 +164,24 @@ export const getLessonById = async (
             });
         }
 
+        const lessonObj =
+            lesson.toObject();
+
+        const participantsCount =
+            lessonObj.participants.length;
+
+        if (!isAuthenticated) {
+            // Anonymous visitors get the count above, but not who — names/emails
+            // are only ever sent to logged-in requests (populated above).
+            lessonObj.participants = [];
+        }
+
         return res.status(200).json({
             success: true,
-            lesson
+            lesson: {
+                ...lessonObj,
+                participantsCount
+            }
         });
 
     } catch (error) {

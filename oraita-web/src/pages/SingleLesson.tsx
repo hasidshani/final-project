@@ -10,7 +10,7 @@ import type { MatchRequest } from '../hooks/useMatchRequests';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1200&auto=format&fit=crop';
 
-type ParticipantInfo = { _id: string; name: string; openToMatch?: boolean };
+type ParticipantInfo = { _id: string; name: string; openToMatch?: boolean; gender?: 'זכר' | 'נקבה' };
 
 // One row in the participants list — handles its own request/respond UI so
 // the page component doesn't have to track per-row state.
@@ -76,6 +76,11 @@ function ParticipantRow({
             </div>
         );
     } else if (canRequest) {
+        // A prior request from this viewer to this participant was declined —
+        // still allowed to try again, but say so instead of silently resetting
+        // to the same button as if nothing had happened.
+        const previouslyDeclined = relation?.status === 'declined' && relation.from._id === currentUserId;
+
         leftContent = composing ? (
             <div className="d-flex flex-column gap-1 text-end" style={{ minWidth: 260 }}>
                 <textarea
@@ -95,9 +100,12 @@ function ParticipantRow({
                 </div>
             </div>
         ) : (
-            <button className="btn btn-sm btn-outline-dark" onClick={() => setComposing(true)}>
-                🤝 בקש ליצור קשר
-            </button>
+            <div className="d-flex flex-column align-items-end gap-1">
+                {previouslyDeclined && <span className="small text-muted">הבקשה הקודמת נדחתה</span>}
+                <button className="btn btn-sm btn-outline-dark" onClick={() => setComposing(true)}>
+                    🤝 {previouslyDeclined ? 'שליחת בקשה מחדש' : 'בקש ליצור קשר'}
+                </button>
+            </div>
         );
     }
 
@@ -338,8 +346,13 @@ function SingleLesson() {
                             <div className="card border-0 shadow-sm">
                                 <div className="card-body">
                                     <h6 className="fw-bold mb-3 text-end">
-                                        👥 משתתפים ({lesson.participants.length}/{lesson.maxParticipants})
+                                        👥 משתתפים ({lesson.participantsCount}/{lesson.maxParticipants})
                                     </h6>
+                                    {!user ? (
+                                        <p className="text-muted small mb-0">
+                                            <Link to="/login">התחברו</Link> כדי לראות את רשימת המשתתפים
+                                        </p>
+                                    ) : (
                                     <ul className="list-group list-group-flush">
                                         {lesson.participants.map(p => (
                                             <ParticipantRow
@@ -356,13 +369,17 @@ function SingleLesson() {
                                                     isParticipant &&
                                                     p._id !== user?._id &&
                                                     !!user?.openToMatch &&
-                                                    !!p.openToMatch
+                                                    !!p.openToMatch &&
+                                                    !!user?.gender &&
+                                                    !!p.gender &&
+                                                    user.gender !== p.gender
                                                 }
                                                 onSend={sendMatchRequest}
                                                 onRespond={respondMatchRequest}
                                             />
                                         ))}
                                     </ul>
+                                    )}
                                     {isParticipant && !user?.openToMatch && (
                                         <p className="small text-muted text-end mt-3 mb-0">
                                             רוצים ליצור קשר עם משתתפים אחרים? הפעילו את האפשרות בלוח הבקרה.

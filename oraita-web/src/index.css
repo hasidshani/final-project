@@ -202,6 +202,19 @@ body {
     .page-banner { height: 220px; }
 }
 
+/* ── Warm page background (Dashboard / All Lessons) — replaces the flat cream
+   body color with soft gold glows + a faint dot texture, so white cards have
+   something to sit on instead of white-on-white ── */
+.page-warm-bg {
+    background-color: var(--bg-creme);
+    background-image:
+        radial-gradient(circle at 10% 5%, rgba(212,163,115,0.18) 0%, transparent 42%),
+        radial-gradient(circle at 90% 95%, rgba(212,163,115,0.15) 0%, transparent 48%),
+        radial-gradient(rgba(196,144,96,0.14) 1px, transparent 1.5px);
+    background-size: 100% 100%, 100% 100%, 26px 26px;
+    background-repeat: no-repeat, no-repeat, repeat;
+}
+
 /* ── Decorative gold double frame around a body text card (e.g. About) ── */
 .about-card-frame {
     border: 1px solid var(--gold);

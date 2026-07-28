@@ -49,5 +49,9 @@ export const updateMatchPreferenceSchema = Joi.object({
     openToMatch: Joi.boolean().required()
         .messages({
             'any.required': 'חסר ערך openToMatch'
+        }),
+    gender: Joi.string().valid('זכר', 'נקבה').optional()
+        .messages({
+            'any.only': 'יש לבחור בן או בת'
         })
 });

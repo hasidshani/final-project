@@ -9,6 +9,7 @@ interface AuthUser {
     email: string;
     phone?: string;
     openToMatch?: boolean;
+    gender?: 'זכר' | 'נקבה';
     favorites?: string[];
 }
 

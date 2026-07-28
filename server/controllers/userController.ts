@@ -200,6 +200,7 @@ export const loginUser = async (
                 email: user.email,
                 phone: user.phone,
                 openToMatch: user.openToMatch,
+                gender: user.gender,
                 favorites: user.favorites
             }
         });
@@ -568,7 +569,7 @@ export const googleSignin = async (req: Request, res: Response) => {
             success: true,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, openToMatch: user.openToMatch, favorites: user.favorites },
+            user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, openToMatch: user.openToMatch, gender: user.gender, favorites: user.favorites },
         });
     } catch (err) {
         return res.status(400).json({ success: false, message: 'Google authentication failed' });
@@ -605,7 +606,7 @@ export const updatePhone = async (req: Request, res: Response) => {
 // Update the logged-in user's match-request opt-in preference
 export const updateMatchPreference = async (req: Request, res: Response) => {
     const userId = req.userId as string;
-    const { openToMatch } = req.body;
+    const { openToMatch, gender } = req.body;
 
     try {
         const user = await User.findById(userId);
@@ -614,12 +615,25 @@ export const updateMatchPreference = async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
+        // Gender drives the opposite-gender matching rule in createMatchRequest,
+        // so it must be known before the feature can be turned on.
+        if (openToMatch && !gender && !user.gender) {
+            return res.status(400).json({
+                success: false,
+                message: 'יש לבחור בן או בת כדי להפעיל את האפשרות'
+            });
+        }
+
+        if (gender) {
+            user.gender = gender;
+        }
+
         user.openToMatch = openToMatch;
         await user.save();
 
         return res.status(200).json({
             success: true,
-            user: { _id: user._id, name: user.name, email: user.email, openToMatch: user.openToMatch },
+            user: { _id: user._id, name: user.name, email: user.email, openToMatch: user.openToMatch, gender: user.gender },
         });
     } catch (error) {
         return res.status(400).json({

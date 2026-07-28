@@ -25,20 +25,34 @@ function MatchPreferenceCard() {
     const { user, updateUser } = useAuth();
     const [saving, setSaving] = useState(false);
     const [error, setError]   = useState('');
+    const [choosingGender, setChoosingGender] = useState(false);
 
-    const toggle = async () => {
+    const save = async (openToMatch: boolean, gender?: 'זכר' | 'נקבה') => {
         setSaving(true);
         setError('');
-        const next = !user?.openToMatch;
         try {
-            await api.patch('/users/match-preference', { openToMatch: next });
-            updateUser({ openToMatch: next });
-        } catch {
-            setError('שגיאה בעדכון ההעדפה');
+            const res = await api.patch('/users/match-preference', { openToMatch, ...(gender ? { gender } : {}) });
+            updateUser({ openToMatch: res.data.user.openToMatch, gender: res.data.user.gender });
+            setChoosingGender(false);
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'שגיאה בעדכון ההעדפה');
         } finally {
             setSaving(false);
         }
     };
+
+    const toggle = () => {
+        const next = !user?.openToMatch;
+        if (next && !user?.gender) {
+            setChoosingGender(true);
+            return;
+        }
+        save(next);
+    };
+
+    // Accounts that opted in before gender-based matching existed have
+    // openToMatch=true but no gender yet — prompt them too, not just on a fresh click.
+    const showGenderPrompt = choosingGender || (!!user?.openToMatch && !user?.gender);
 
     return (
         <div className="card border-0 shadow-sm mb-4">
@@ -46,8 +60,18 @@ function MatchPreferenceCard() {
                 <div className="text-end">
                     <h6 className="fw-bold mb-1">🤝 פתיחות להיכרויות</h6>
                     <p className="text-muted small mb-0">
-                        כשאתה לוחץ על פעיל, משתתפים אחרים ששותפים איתך לשיעורים (שגם פתוחים להיכרויות) יוכלו לבקש ליצור איתך קשר ותוכלו להכיר.
+                        כשאתה לוחץ על פעיל, משתתפים מהמין השני ששותפים איתך לשיעורים (שגם פתוחים להיכרויות) יוכלו לבקש ליצור איתך קשר ותוכלו להכיר.
                     </p>
+                    {showGenderPrompt && (
+                        <div className="d-flex gap-2 mt-2 justify-content-end align-items-center flex-wrap">
+                            <span className="small text-muted">כדי לדעת אילו הצעות להציג — האם הנך:</span>
+                            <button className="btn btn-sm btn-outline-dark" onClick={() => save(true, 'זכר')} disabled={saving}>בן</button>
+                            <button className="btn btn-sm btn-outline-dark" onClick={() => save(true, 'נקבה')} disabled={saving}>בת</button>
+                            {choosingGender && (
+                                <button className="btn btn-sm btn-outline-secondary" onClick={() => setChoosingGender(false)} disabled={saving}>ביטול</button>
+                            )}
+                        </div>
+                    )}
                     {error && <p className="text-danger small mb-0 mt-1">{error}</p>}
                 </div>
                 <button
@@ -64,9 +88,10 @@ function MatchPreferenceCard() {
 
 function MatchRequestRow({ request, mode, onRespond }: {
     request: MatchRequest;
-    mode: 'incoming' | 'outgoing' | 'accepted';
+    mode: 'incoming' | 'outgoing' | 'accepted' | 'declined';
     onRespond: (id: string, status: 'accepted' | 'declined') => Promise<void>;
 }) {
+    const { user } = useAuth();
     const [responding, setResponding] = useState(false);
 
     const respond = async (status: 'accepted' | 'declined') => {
@@ -74,7 +99,11 @@ function MatchRequestRow({ request, mode, onRespond }: {
         try { await onRespond(request._id, status); } finally { setResponding(false); }
     };
 
-    const other = mode === 'incoming' ? request.from : request.to;
+    // The "other side" of the request is whichever party isn't the viewer —
+    // for accepted requests the viewer can be either the original sender or
+    // recipient, so this can't be inferred from `mode` alone (that previously
+    // showed the viewer's own name/phone whenever they were the original recipient).
+    const other = request.from._id === user?._id ? request.to : request.from;
 
     return (
         <div className="d-flex justify-content-between align-items-start py-3 border-bottom text-end">
@@ -91,14 +120,16 @@ function MatchRequestRow({ request, mode, onRespond }: {
                 </div>
             )}
             {mode === 'outgoing' && <span className="badge bg-light text-dark border">ממתין לתשובה</span>}
+            {mode === 'declined' && <span className="badge bg-light text-danger border">נדחתה</span>}
         </div>
     );
 }
 
-function MatchRequestsPanel({ incoming, outgoing, accepted, loading, error, respond }: {
+function MatchRequestsPanel({ incoming, outgoing, accepted, declined, loading, error, respond }: {
     incoming: MatchRequest[];
     outgoing: MatchRequest[];
     accepted: MatchRequest[];
+    declined: MatchRequest[];
     loading: boolean;
     error: string;
     respond: (id: string, status: 'accepted' | 'declined') => Promise<void>;
@@ -106,7 +137,7 @@ function MatchRequestsPanel({ incoming, outgoing, accepted, loading, error, resp
     if (loading) return <p className="text-center text-muted py-3">טוען...</p>;
     if (error)   return <p className="text-center text-danger py-3">{error}</p>;
 
-    if (incoming.length === 0 && outgoing.length === 0 && accepted.length === 0) {
+    if (incoming.length === 0 && outgoing.length === 0 && accepted.length === 0 && declined.length === 0) {
         return <p className="text-center text-muted py-3">אין בקשות היכרות כרגע</p>;
     }
 
@@ -128,6 +159,12 @@ function MatchRequestsPanel({ incoming, outgoing, accepted, loading, error, resp
                 <>
                     <h6 className="fw-bold text-end mb-2 mt-4">אנשי קשר</h6>
                     {accepted.map(r => <MatchRequestRow key={r._id} request={r} mode="accepted" onRespond={respond} />)}
+                </>
+            )}
+            {declined.length > 0 && (
+                <>
+                    <h6 className="fw-bold text-end mb-2 mt-4">בקשות שנדחו</h6>
+                    {declined.map(r => <MatchRequestRow key={r._id} request={r} mode="declined" onRespond={respond} />)}
                 </>
             )}
         </div>
@@ -199,7 +236,7 @@ function Dashboard() {
     const { user } = useAuth();
     const { loading, error, joinedLessons, createdLessons, favoriteLessons, pastLessons, deleteLesson, leaveLesson } = useDashboard();
     const {
-        incoming: incomingRequests, outgoing: outgoingRequests, accepted: acceptedRequests,
+        incoming: incomingRequests, outgoing: outgoingRequests, accepted: acceptedRequests, declined: declinedRequests,
         loading: matchLoading, error: matchError, respond: respondMatchRequest,
     } = useMatchRequests();
     const [activeTab, setActiveTab] = useState<Tab>('joined');
@@ -224,6 +261,7 @@ function Dashboard() {
 
     return (
         <Layout>
+            <div className="page-warm-bg">
             <main className="container py-5">
 
                 <div className="text-end mb-4">
@@ -274,6 +312,7 @@ function Dashboard() {
                                 incoming={incomingRequests}
                                 outgoing={outgoingRequests}
                                 accepted={acceptedRequests}
+                                declined={declinedRequests}
                                 loading={matchLoading}
                                 error={matchError}
                                 respond={respondMatchRequest}
@@ -298,6 +337,7 @@ function Dashboard() {
                 </div>
 
             </main>
+            </div>
         </Layout>
     );
 }

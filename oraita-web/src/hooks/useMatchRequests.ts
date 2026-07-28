@@ -48,6 +48,10 @@ export function useMatchRequests() {
     const incoming = requests.filter(r => user && r.to._id === user._id && r.status === 'pending');
     const outgoing = requests.filter(r => user && r.from._id === user._id && r.status === 'pending');
     const accepted = requests.filter(r => r.status === 'accepted');
+    // Requests the viewer sent that were declined — surfaced so the sender is
+    // actually told "no" instead of the request silently vanishing (it can
+    // still be re-sent afterward, this is purely about visibility).
+    const declined = requests.filter(r => user && r.from._id === user._id && r.status === 'declined');
 
     const sendRequest = async (toUserId: string, lessonId: string, note: string) => {
         await api.post(`/matchrequests/${toUserId}`, { lessonId, note });
@@ -60,5 +64,5 @@ export function useMatchRequests() {
         refreshMatchCount(); // pending-incoming count changed — keep the navbar badge in sync
     };
 
-    return { requests, incoming, outgoing, accepted, loading, error, sendRequest, respond, refetch: fetchRequests };
+    return { requests, incoming, outgoing, accepted, declined, loading, error, sendRequest, respond, refetch: fetchRequests };
 }

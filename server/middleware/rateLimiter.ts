@@ -14,5 +14,10 @@ export const apiLimiter = rateLimit({
 export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
+    // Only failed attempts count toward the limit — successful logins/registrations
+    // don't. Without this, everyone testing from the same IP (family members on one
+    // router, or one dev machine) shares a single 10-request budget and real,
+    // successful logins get blocked as if they were brute-force attempts.
+    skipSuccessfulRequests: true,
     message: { success: false, message: 'Too many login attempts, please try again later.' }
 });
