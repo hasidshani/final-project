@@ -66,7 +66,7 @@ FinalProject/
 │   ├── types/
 │   │   └── express.d.ts             ← extends Request with userId?: string
 │   ├── models/
-│   │   ├── users.ts                 ← User schema (name, email, password, phone, favorites, refreshTokens)
+│   │   ├── users.ts                 ← User schema (name, email, password, phone, favorites, refreshTokens, openToMatch, gender)
 │   │   ├── lessons.ts               ← Lesson schema (title, description, category, city, date, time, image, creator, participants, maxParticipants, rating)
 │   │   └── comments.ts              ← Comment schema (lesson, user, text)
 │   ├── controllers/
@@ -79,12 +79,12 @@ FinalProject/
 │   │   ├── comments_routes.ts       ← /api/comments/*
 │   │   └── file_routes.ts           ← /api/file (POST / — multer buffers upload → Cloudinary → returns {url: secure_url}; ⚠ currently no auth middleware — open endpoint)
 │   ├── middleware/
-│   │   ├── authMiddleware.ts        ← JWT verify → sets req.userId
+│   │   ├── authMiddleware.ts        ← JWT verify → sets req.userId; + optionalAuth (sets req.userId if a valid token is present, never rejects — used by the public lesson-detail route)
 │   │   ├── errorHandler.ts          ← global 4-param error handler
 │   │   ├── logger.ts                ← request logger
 │   │   ├── validate.ts              ← JOI middleware wrapper (stripUnknown: true)
 │   │   ├── upload.ts                ← dead code — old disk-storage Multer config from the pre-Cloudinary flow, not imported anywhere (file_routes.ts has its own inline memoryStorage config)
-│   │   └── rateLimiter.ts           ← apiLimiter (100/15min) + authLimiter (10/15min)
+│   │   └── rateLimiter.ts           ← apiLimiter (300/15min) + authLimiter (10/15min, skipSuccessfulRequests — only failed attempts count)
 │   └── validation/
 │       ├── userValidation.ts        ← registerSchema, loginSchema, updatePhoneSchema (all messages in Hebrew)
 │       └── lessonValidation.ts      ← createLessonSchema (includes optional image string, reused for updateLesson)
@@ -147,7 +147,7 @@ Base URL: `http://localhost:3000/api`
 | POST | `/refresh` | ❌ | Get new access token |
 | POST | `/google` | ❌ | Google Sign-In — verifies credential, finds/creates user, returns tokens (+ phone + favorites) |
 | PATCH | `/phone` | ✅ | Update logged-in user's phone number (used by the post-Google-login "add phone?" prompt) |
-| PATCH | `/match-preference` | ✅ | Toggle `openToMatch` — opts the user in/out of the match-request feature |
+| PATCH | `/match-preference` | ✅ | Toggle `openToMatch` — opts the user in/out of the match-request feature. Turning it on requires a `gender` ('זכר'\|'נקבה') to be known (passed in this call, or already saved from before) — 400 otherwise |
 | POST | `/favorites/:lessonId` | ✅ | Add lesson to favorites |
 | DELETE | `/favorites/:lessonId` | ✅ | Remove lesson from favorites |
 
@@ -156,7 +156,7 @@ Base URL: `http://localhost:3000/api`
 |--------|-------|------|-------------|
 | GET | `/` | ❌ | Get all lessons (creator populated) |
 | POST | `/` | ✅ | Create lesson — JSON body (image is a URL string, not a file) |
-| GET | `/:id` | ❌ | Get single lesson (creator + participants populated, includes ratings array). Participants are populated with `name email openToMatch` only — phone numbers are never sent on this public route; they're only ever revealed via an accepted match request (see below) |
+| GET | `/:id` | ❌ | Get single lesson (creator populated, includes ratings array). Route is public but optionally authenticated (`optionalAuth` middleware) — only authenticated requests get participants populated (`name email openToMatch gender`); anonymous requests get `participants: []` plus an always-accurate `participantsCount` field, so anonymous visitors see the lesson details and how many registered but not who. Phone numbers are never sent here regardless of auth — only ever revealed via an accepted match request (see below) |
 | POST | `/:id/join` | ✅ | Join lesson (checks capacity) |
 | DELETE | `/:id/join` | ✅ | Cancel registration (leave lesson) — validates user is a participant |
 | POST | `/:id/rate` | ✅ | Rate lesson 1-5 stars — participants only, only after lesson date has passed; updates or replaces existing rating, recomputes average |
@@ -179,7 +179,7 @@ Base URL: `http://localhost:3000/api`
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
 | GET | `/me` | ✅ | Get all match requests (sent or received) for the logged-in user. Phone numbers of `from`/`to` are stripped from the response unless `status === 'accepted'` |
-| POST | `/:toUserId` | ✅ | Send a match request to another participant, scoped to a specific `lessonId` (in body, + optional `note` ≤200 chars). Requires: not self, both users have `openToMatch: true`, both are participants of that lesson, and no existing pending/accepted request already exists between the pair |
+| POST | `/:toUserId` | ✅ | Send a match request to another participant, scoped to a specific `lessonId` (in body, + optional `note` ≤200 chars). Requires: not self, both users have `openToMatch: true`, both have a `gender` set, both genders differ (400 `"ניתן ליצור קשר רק עם משתתפים מהמין השני"` otherwise), both are participants of that lesson, and no existing pending/accepted request already exists between the pair. Still allowed again after a previous request between the pair was declined |
 | PATCH | `/:id` | ✅ | Accept or decline a request (`{ status: 'accepted' \| 'declined' }`) — recipient only |
 
 ### Static files
@@ -199,8 +199,9 @@ Authorization: Bearer <accessToken>
 
 ### User
 ```ts
-{ name, email, password (bcrypt), phone?, openToMatch (default false), favorites: [ObjectId→Lesson], refreshTokens: [string], timestamps }
+{ name, email, password (bcrypt), phone?, openToMatch (default false), gender?: 'זכר' | 'נקבה', favorites: [ObjectId→Lesson], refreshTokens: [string], timestamps }
 ```
+`gender` is required before `openToMatch` can be set to `true` (enforced in `updateMatchPreference`) — match requests are only ever offered between opposite genders.
 
 ### Lesson
 ```ts
@@ -272,6 +273,15 @@ VITE_API_URL=http://localhost:3000/api
 
 ## Current State
 
+### ✅ Everything Working (as of 2026-07-28 — match-request fixes, gender restriction, deployment kickoff)
+- **Anonymous visitors no longer see participant names** — `GET /api/lessons/:id` now optionally-authenticated; only logged-in requests get participant names/emails, anonymous ones get a `participantsCount` only. Full detail in Session 14.
+- **Match requests only offered between opposite genders** — new required `gender` field, enforced both client-side (button visibility) and server-side (`createMatchRequest`). Existing accounts that opted in before this feature are prompted for gender automatically.
+- **Fixed a real bug where a user's own name/phone showed instead of the other party's** in the Dashboard's accepted-contacts view — see Session 14 for the root cause.
+- **Declined match requests are now visible to the sender** (previously silently vanished) — new "בקשות שנדחו" section + inline note, resend still allowed.
+- **Login rate-limit false positives fixed** — successful logins no longer count toward the 10-per-15-min `authLimiter` cap.
+- **Dashboard and All Lessons pages have a warm background treatment** instead of flat white/cream — visual-only, not yet confirmed in a live browser.
+- **Deployment started** — MongoDB Atlas and Render (backend) are live; Vercel (frontend) and final wiring still pending. See "Deployment Guide" section for exact status.
+
 ### ✅ Everything Working (as of 2026-07-27 — visual design pass)
 - **New public About page** (`/about`, reachable from Navbar + Footer, no login required) — Shani's personal introduction to the site, word-for-word, with a photo banner (her own uploaded photo, not stock) and a gold double-frame around the text card. Full detail in Session 13.
 - **Homepage hero redesign** — large "אורייתא" wordmark, continuously scrolling background photo strip mixing real lesson photos with stock filler, dark-to-gold overlay for readability. Also fixed a pre-existing dead fallback-image URL (404) used across `LessonCard`/`SingleLesson`.
@@ -323,11 +333,13 @@ VITE_API_URL=http://localhost:3000/api
 - **Delete confirmation** — Hebrew inline confirm before deleting a lesson in Dashboard
 
 ### ⚠ Still To Do
-1. **Deploy** — MongoDB Atlas → Render (backend) → Vercel (frontend). See deployment guide below. The grading rubric requires submission as a live URL, not local-only — this is the largest remaining gap.
+1. **Deploy** — in progress, see "Deployment Guide" below for full status. ✅ MongoDB Atlas live, ✅ Render (backend) live and building successfully. ⏳ Still pending: Vercel (frontend), then Phase D (point Render's `CLIENT_URL` at the real Vercel URL + add the Vercel URL to Google Cloud Console's authorized JavaScript origins), then full end-to-end verification against the live URLs. The grading rubric requires submission as a live URL, not local-only.
 2. **Add screenshots to README** — placeholder section added 2026-07-27; needs real screenshots of HomePage/AllLessons/SingleLesson/Dashboard/CreateLesson before submission.
 3. **Mobile responsiveness** — never verified in an actual browser; do a manual check.
 4. **Delete dead code** — `server/middleware/upload.ts` (old pre-Cloudinary disk-storage Multer config) is unused by any route; safe to delete.
 5. Update README's "Live Demo" URLs once deployed (currently `_coming soon_`).
+6. **Compress `oraita-web/src/assets/about-banner.jpg`** — ~2.3MB in the production bundle (flagged Session 13), worth shrinking before the lecturer loads the live site.
+7. Consider rotating the MongoDB Atlas database password — it was pasted in plaintext into a chat session while setting up Render env vars (2026-07-28). Not a code issue, just a "the value has been typed somewhere outside the .env file" hygiene note.
 
 ### ✅ Lecturer feedback — implemented (2026-07-26)
 
@@ -355,14 +367,16 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 
 ## Deployment Guide (manual steps)
 
-### A — MongoDB Atlas
+**Status as of 2026-07-29: Phase A ✅ done, Phase B ✅ done (build succeeded after the fix noted below). Phase C (Vercel) in progress — project created (root `oraita-web`, Vite preset, `VITE_API_URL` set), first deploy failed on a missing `bootstrap` dependency (fixed, see below), redeploy + `VITE_GOOGLE_CLIENT_ID` env var still pending. Phase D and final verification still pending.**
+
+### A — MongoDB Atlas ✅ done
 1. [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → free M0 cluster
 2. Database Access → add user with password
-3. Network Access → `0.0.0.0/0`
-4. Connect → Drivers → copy connection string → replace `<password>`
+3. Network Access → `0.0.0.0/0` (required — Render has no fixed IP to whitelist)
+4. Connect → Drivers → Node.js → copy connection string → replace `<password>` → add db name (`/oraita_db`) before the `?`
 
-### B — Render (backend)
-- Build command: `npm run build`
+### B — Render (backend) ✅ done
+- Build command: `npm install && npm run build` — **not just `npm run build`.** Render does not automatically run `npm install` before a custom Build Command; whatever is in that field is the entire build step. The first deploy attempt used just `npm run build` and failed with `Cannot find module 'express'` / `'mongoose'` / `Cannot find name 'process'` — not a `dependencies`/`devDependencies` placement bug (verified all the `@types/*` packages are correctly in `devDependencies`), but `node_modules` never being installed at all. Fixed by prefixing `npm install &&`.
 - Start command: `npm run start`
 - Root directory: *(project root)*
 - Environment variables:
@@ -379,19 +393,28 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
   CLOUDINARY_API_SECRET = <from cloudinary.com dashboard>
   GOOGLE_CLIENT_ID       = <from console.cloud.google.com>
   ```
+  `CLIENT_URL` was set to a temporary `http://localhost:5173` placeholder until Vercel exists (Phase D updates it to the real value).
 - Uploaded images go to Cloudinary, not the local filesystem, so Render's ephemeral disk is no longer a concern for images (see Known Issue #3, updated).
 
-### C — Vercel (frontend)
+### C — Vercel (frontend) 🔧 in progress
 - Root directory: `oraita-web`
 - Framework: Vite (auto-detected)
 - Output directory: `dist`
+- Backend is live at `https://oraita-api.onrender.com` (confirmed 2026-07-29 via Render dashboard).
 - Environment variables:
   ```
-  VITE_API_URL = https://<your-render-url>.onrender.com/api
+  VITE_API_URL         = https://oraita-api.onrender.com/api
+  VITE_GOOGLE_CLIENT_ID = <same value as oraita-web/.env — Google client IDs are public/client-side by design>
   ```
+  Only `VITE_API_URL` was set on the first project setup — `VITE_GOOGLE_CLIENT_ID` was missed and still needs to be added, or Google Sign-In will silently break in production (`clientId` resolves to `undefined`).
+- **First deploy failed:** `[vite]: Rolldown failed to resolve import "bootstrap/dist/css/bootstrap.min.css"`. Root cause: `bootstrap` was only ever declared as a dependency in the **root** `package.json` (used by the backend), not in `oraita-web/package.json`, even though `oraita-web/src/main.tsx` imports it directly. Locally this worked because Vite falls back to the parent `node_modules`; Vercel only installs within the configured Root Directory (`oraita-web`), so the import had nothing to resolve. Fixed 2026-07-29 by adding `"bootstrap": "^5.3.8"` as a real dependency in `oraita-web/package.json` (`npm install` run inside `oraita-web/` to update its own `package-lock.json`). Verified `npm run build` succeeds locally after the fix. Redeploy on Vercel still pending.
 
-### D — After both are live
+### D — After both are live ⏳ not started
 - Go back to Render → update `CLIENT_URL` to the real Vercel URL → redeploy
+- Go to Google Cloud Console → OAuth 2.0 Client ID → Authorized JavaScript origins → add the Vercel URL (currently only `http://localhost:5173`/`http://localhost` are authorized — Google Sign-In will fail in production without this)
+
+### E — Verify ⏳ not started
+- Re-run the same manual checklist used locally (register/login, create lesson + image upload, join/leave, rate a past lesson, match-request flow) against the live URLs instead of localhost.
 
 ---
 
@@ -410,6 +433,8 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 6. **Helmet CORP header (FIXED):** Helmet adds `Cross-Origin-Resource-Policy: same-origin` to all responses by default. This blocked the React frontend (port 5173) from loading images served by the backend (port 3000) since they are different origins. Fixed by overriding the header to `cross-origin` specifically on the `/public` and `/uploads` static routes.
 
 7. **Image URL stored in MongoDB:** The `image` field in the `lessons` collection stores the full URL string (e.g. `http://localhost:3000/public/1234567890.jpg`). Visible in MongoDB Compass under the `lessons` collection.
+
+8. **Render Build Command must include `npm install` explicitly (FIXED 2026-07-28):** Unlike some other Node hosts, Render does not automatically run `npm install` before a custom Build Command — whatever's in that field is the entire build step. Setting it to just `npm run build` left `node_modules` completely empty, causing `tsc` to fail with `Cannot find module 'express'`/`'mongoose'`/`Cannot find name 'process'` (looked like a `dependencies`/`devDependencies` placement bug at first, but all the `@types/*` packages were already correctly placed — nothing had been installed at all). Fixed by setting the Build Command to `npm install && npm run build`.
 
 ---
 
@@ -471,12 +496,48 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 | Authentication & Security | 20 pts | ✅ bcrypt, JWT + refresh tokens, protected routes, rate limiting, Helmet |
 | Frontend — React & State | 20 pts | ✅ Context API + Redux, custom hooks (`src/hooks/`), components, lazy loading, React.memo, `.map()` lists |
 | UI/UX & Responsiveness | 10 pts | ⚠ Loading/error states ✅ — mobile responsiveness needs manual check |
-| Deployment | 5 pts | ⚠ Code prepped — needs Atlas + Render + Vercel accounts (see guide above) |
+| Deployment | 5 pts | ⚠ In progress — Atlas ✅ + Render ✅ live, Vercel + final wiring (Phase D) pending (see guide above) |
 | Git Workflow & README | 5 pts | ✅ README.md complete + .env.example committed |
 
 ---
 
 ## Session Log
+
+### Session 14 (2026-07-28) — Match-Request Bug Fixes, Gender-Restricted Matching, Visual Polish, Deployment Kickoff
+
+#### Context
+Continuing from Session 12/13's match-request feature. Shani had tested it live with real family accounts (Uri, Michal, Shani herself) and reported several bugs across two rounds of feedback, then asked for a visual polish pass on the Dashboard/All Lessons pages, then moved on to starting deployment (Atlas → Render → Vercel).
+
+#### Bug fixes — match requests
+- **Participant privacy for anonymous visitors** — `GET /api/lessons/:id` is public but previously always populated full participant names/emails regardless of login state. Added `optionalAuth` middleware (`server/middleware/authMiddleware.ts`) — sets `req.userId` when a valid token is present but never rejects the request (missing/invalid token just means "anonymous"). `getLessonById` now only populates participant `name/email/openToMatch/gender` when authenticated; anonymous requests get `participants: []` plus a new always-accurate `participantsCount` field. Frontend (`useSingleLesson.ts`, `SingleLesson.tsx`) updated to use `participantsCount` for the "👥 משתתפים (X/Y)" counter and capacity checks, and to only render the actual participant list to logged-in users (anonymous visitors see "התחברו כדי לראות את רשימת המשתתפים" instead).
+- **Wrong name/phone shown in "אנשי קשר" (accepted contacts)** — real bug found while investigating Shani's report that her own contacts tab showed "Shani" instead of "Uri". `Dashboard.tsx`'s `MatchRequestRow` computed the displayed "other party" as `mode === 'incoming' ? request.from : request.to` — for the accepted/contacts view this always resolved to `request.to`. Since the real Uri→Shani request has `to: Shani`, her own contacts tab showed her own name and phone number instead of Uri's. Fixed by deriving the other party from whichever side isn't the current viewer (`request.from._id === user?._id ? request.to : request.from`); verified directly against the real DB record (`from: אורי יעקב`, `to: שני חסיד`, `status: accepted`) that the fix produces the correct name/phone for each side.
+- **"Both see 0 instead of 1"** — investigated as a suspected pending-count bug (reproduced with temp QA accounts, confirmed `GET /api/matchrequests/me` is correct and consistent across repeated fetches for both sender and recipient). Turned out to be a side-effect of the bug above, not a separate count bug: the real Uri↔Shani request was already `status: accepted` from earlier testing, so 0 pending is correct — the accepted contact just looked broken due to the name mix-up.
+- **Declined requests were invisible** — a decline just silently reverted the sender's view back to "🤝 בקש ליצור קשר" with no acknowledgment anything happened, and a new request could be silently sent again. Not changed: resending after a decline is still allowed (unchanged design from Session 12). Changed: the sender now sees "הבקשה הקודמת נדחתה" next to the resend button on `SingleLesson`'s participant row, and a new "בקשות שנדחו" section on the Dashboard's "בקשות היכרות" tab lists declined outgoing requests with a "נדחתה" badge. New `declined` filtered array added to `useMatchRequests.ts` (`requests.filter(r => r.from._id === user._id && r.status === 'declined')`).
+- **Login rate limiter false positives** — `"Too many login attempts, please try again later"` was tripping from normal use, not abuse (real family members testing from the same IP/router share one 10-request budget in `authLimiter`, and every successful login/register counted against it same as a failed one). `authLimiter` (`server/middleware/rateLimiter.ts`) now sets `skipSuccessfulRequests: true` — only failed login/register attempts count toward the 10-per-15-min limit; successful logins never trip it. Security posture against actual brute-forcing is unchanged (repeated wrong-password guessing still gets throttled).
+
+#### Gender-restricted matching (new)
+Shani asked that match requests only ever be offered between opposite genders — previously any two opted-in participants could request each other regardless of gender, which she flagged as wrong for the feature's intent (a shidduch-style introduction feature, not a general social one).
+- `server/models/users.ts` — new optional `gender: 'זכר' | 'נקבה'` field (Hebrew enum values, matching the existing convention used for `category`/`city` on the Lesson model).
+- `server/validation/userValidation.ts` — `updateMatchPreferenceSchema` accepts an optional `gender`, validated against the same enum.
+- `server/controllers/userController.ts` (`updateMatchPreference`) — turning `openToMatch` on now requires a gender to be known (passed in this call, or already saved) — 400 with a Hebrew message otherwise. `gender` also added to the `loginUser`/`googleSignin` response payloads so the frontend has it immediately after login.
+- `server/controllers/matchRequestController.ts` (`createMatchRequest`) — new checks: both users must have a `gender` set (guards accounts that opted into matching before this field existed — e.g. the real Uri/Shani accounts — rather than silently letting them bypass the restriction), and rejects with `"ניתן ליצור קשר רק עם משתתפים מהמין השני"` if both share the same gender.
+- `server/controllers/lessonController.ts` — participant populate string extended to include `gender` (needed client-side to gate the request button per participant).
+- Frontend: `Dashboard.tsx`'s `MatchPreferenceCard` now prompts for בן/בת (with copy "כדי לדעת אילו הצעות להציג — האם הנך:") the first time a user activates `openToMatch`, and automatically re-prompts existing users who were already active from before this feature existed (detected via `openToMatch === true && !gender`). `SingleLesson.tsx`'s `canRequest` now also requires both sides to have a gender set and for them to differ.
+- Verified live end-to-end with temporary QA accounts (registered, tested, then deleted from the DB afterward): enabling match without gender → 400; same-gender request → rejected; opposite-gender request → succeeds; decline → sender sees the declined state and resend still works and succeeds afterward.
+
+#### Visual polish
+Shani felt the Dashboard ("לוח בקרה") and All Lessons ("כל השיעורים") pages were "too white."
+- New `.page-warm-bg` class (`oraita-web/src/index.css`) — soft gold-tinted radial glows (top and bottom corners) plus a faint dot texture, layered over the existing `--bg-creme` background, using the same `--gold` (#D4A373) token already used everywhere else in the site rather than introducing a new color.
+- Applied to a full-width wrapper behind both pages' header+main content (not directly on the Bootstrap `.container`, which would have clipped the gradient to the centered column width instead of spanning the full viewport).
+- Not yet visually confirmed in a real browser — the Claude-in-Chrome extension wasn't connected this session. Shani to review live and give feedback; explicitly told this is a first attempt to iterate on, not a final answer.
+
+#### Deployment — started (Atlas ✅, Render ✅, Vercel not yet started)
+Walked through the deployment guide interactively, one phase at a time, at Shani's request (to also be able to explain the process to the lecturer afterward).
+- **MongoDB Atlas** — free M0 cluster created, database user created, Network Access opened to `0.0.0.0/0` (required since Render has no fixed IP to whitelist), connection string built (`mongodb+srv://.../oraita_db?retryWrites=true&w=majority`).
+- **Render (backend)** — Web Service created from the `final-project` GitHub repo (root directory left blank, since the backend lives at the repo root, not a subfolder). All env vars copied from `server/.env`, plus `CLIENT_URL` set to a temporary `http://localhost:5173` placeholder (to be updated once Vercel exists) and `NODE_ENV=production`.
+  - **Build failure, real root cause found and fixed**: first deploy failed with `Cannot find module 'express'` / `'mongoose'` / `Cannot find name 'process'`. Verified this was **not** a `dependencies`/`devDependencies` placement issue (`@types/node`, `@types/express`, `@types/jsonwebtoken`, `@types/cors`, `@types/bcrypt` are all correctly in `devDependencies`) — the actual cause was that the Build Command was set to just `npm run build` (per the original deployment guide), and Render does **not** automatically run `npm install` before a custom Build Command. Fixed by changing the Build Command to `npm install && npm run build`; build succeeded. Deployment guide above and Known Issue #8 updated so this doesn't repeat.
+- **Stopped here for the day** — Vercel (frontend) setup, then Phase D (pointing Render's `CLIENT_URL` at the real Vercel URL + adding the Vercel URL to Google Cloud Console's authorized JavaScript origins), then full end-to-end verification against the live URLs, are still pending — continuing next session.
+- Note: Shani pasted real secrets (Atlas database password, `TOKEN_SECRET`, Cloudinary API secret) directly into the chat while setting up Render's env vars. Flagged to her at the time; she can rotate the Atlas database password if she wants extra caution (highest-value one to rotate, since it grants direct DB access) — not done as of this session, logged as "Still To Do" item 7.
 
 ### Session 12 (2026-07-27) — TeacherProfile Past Lessons + Match Requests ("Unique Feature")
 
