@@ -8,10 +8,7 @@ Built as a **solo** final project for the **Advanced Full Stack** course.
 
 ## Live Demo
 
-| Service | URL |
-|---------|-----|
-| Frontend | _coming soon — not yet deployed_ |
-| Backend API | _coming soon — not yet deployed_ |
+Try it live: 🔗 https://oraita.vercel.app
 
 ---
 
