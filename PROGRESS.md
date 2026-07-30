@@ -273,6 +273,14 @@ VITE_API_URL=http://localhost:3000/api
 
 ## Current State
 
+### ✅ Everything Working (as of 2026-07-30 — deployment complete, PrivateRoute white-screen fix)
+- **Live and verified end-to-end**: frontend at `https://oraita.vercel.app` (Vercel), backend at `https://oraita-api.onrender.com` (Render), both confirmed deployed and in sync on the latest commit via their respective dashboards. Full detail in Session 15.
+- **Vercel project renamed** from the auto-generated `final-project-nu-lime.vercel.app` to the custom domain `oraita.vercel.app` (old domain still works as an alias, no redirect needed).
+- **Fixed: `vercel.json` SPA rewrite never actually shipped** — the commit adding it existed locally but was never pushed to `origin/main`, so Vercel had never built with it despite PROGRESS.md saying it was done. Pushed; direct navigation to `/login`/`/register` etc. now works.
+- **Fixed: production 404 on every API call** — Vercel's `VITE_API_URL` env var was missing the `/api` suffix (`https://oraita-api.onrender.com` instead of `.../api`), so every request from `services/api.ts` 404'd, including plain email/password login and Google sign-in. Corrected + redeployed with a clean build (Vite bakes env vars in at build time, so the fix required a non-cached rebuild).
+- **Fixed: Google Sign-In `origin_mismatch`** — the live Vercel domain wasn't yet in Google Cloud Console's Authorized JavaScript Origins (only `localhost` was). Added; also updated Render's `CLIENT_URL` to the real Vercel domain (confirmed via a live CORS preflight check returning the correct `Access-Control-Allow-Origin`).
+- **Fixed: `PrivateRoute` blank/white screen on protected routes** — `PrivateRoute.tsx` rendered `null` while `AuthContext`'s auth check was in flight. Not an infinite-loading bug (`AuthContext`'s `.finally()` always resolves `loading`), but Render's free tier cold-starts after ~15 min idle (confirmed via Render's own dashboard warning: "can delay requests by 50 seconds or more"), so a returning user with a stale token could see a blank page for that whole window. Now shows a themed Bootstrap spinner instead.
+
 ### ✅ Everything Working (as of 2026-07-28 — match-request fixes, gender restriction, deployment kickoff)
 - **Anonymous visitors no longer see participant names** — `GET /api/lessons/:id` now optionally-authenticated; only logged-in requests get participant names/emails, anonymous ones get a `participantsCount` only. Full detail in Session 14.
 - **Match requests only offered between opposite genders** — new required `gender` field, enforced both client-side (button visibility) and server-side (`createMatchRequest`). Existing accounts that opted in before this feature are prompted for gender automatically.
@@ -333,13 +341,12 @@ VITE_API_URL=http://localhost:3000/api
 - **Delete confirmation** — Hebrew inline confirm before deleting a lesson in Dashboard
 
 ### ⚠ Still To Do
-1. **Deploy** — in progress, see "Deployment Guide" below for full status. ✅ MongoDB Atlas live, ✅ Render (backend) live and building successfully. ⏳ Still pending: Vercel (frontend), then Phase D (point Render's `CLIENT_URL` at the real Vercel URL + add the Vercel URL to Google Cloud Console's authorized JavaScript origins), then full end-to-end verification against the live URLs. The grading rubric requires submission as a live URL, not local-only.
-2. **Add screenshots to README** — placeholder section added 2026-07-27; needs real screenshots of HomePage/AllLessons/SingleLesson/Dashboard/CreateLesson before submission.
-3. **Mobile responsiveness** — never verified in an actual browser; do a manual check.
-4. **Delete dead code** — `server/middleware/upload.ts` (old pre-Cloudinary disk-storage Multer config) is unused by any route; safe to delete.
-5. Update README's "Live Demo" URLs once deployed (currently `_coming soon_`).
-6. **Compress `oraita-web/src/assets/about-banner.jpg`** — ~2.3MB in the production bundle (flagged Session 13), worth shrinking before the lecturer loads the live site.
-7. Consider rotating the MongoDB Atlas database password — it was pasted in plaintext into a chat session while setting up Render env vars (2026-07-28). Not a code issue, just a "the value has been typed somewhere outside the .env file" hygiene note.
+1. **Add screenshots to README** — placeholder section added 2026-07-27; needs real screenshots of HomePage/AllLessons/SingleLesson/Dashboard/CreateLesson before submission.
+2. **Mobile responsiveness** — never verified in an actual browser; do a manual check.
+3. **Delete dead code** — `server/middleware/upload.ts` (old pre-Cloudinary disk-storage Multer config) is unused by any route; safe to delete.
+4. Update README's "Live Demo" URLs now that the site is deployed (currently `_coming soon_`) — frontend `https://oraita.vercel.app`, backend `https://oraita-api.onrender.com`.
+5. **Compress `oraita-web/src/assets/about-banner.jpg`** — ~2.3MB in the production bundle (flagged Session 13), worth shrinking before the lecturer loads the live site.
+6. Consider rotating the MongoDB Atlas database password — it was pasted in plaintext into a chat session while setting up Render env vars (2026-07-28). Not a code issue, just a "the value has been typed somewhere outside the .env file" hygiene note.
 
 ### ✅ Lecturer feedback — implemented (2026-07-26)
 
@@ -367,7 +374,7 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 
 ## Deployment Guide (manual steps)
 
-**Status as of 2026-07-29: Phase A ✅ done, Phase B ✅ done (build succeeded after the fix noted below). Phase C (Vercel) in progress — project created (root `oraita-web`, Vite preset, `VITE_API_URL` set), first deploy failed on a missing `bootstrap` dependency (fixed, see below), redeploy + `VITE_GOOGLE_CLIENT_ID` env var still pending. Phase D and final verification still pending.**
+**Status as of 2026-07-30: All phases (A–E) done. Live at `https://oraita.vercel.app` (frontend) and `https://oraita-api.onrender.com` (backend). Both dashboards confirmed deployed and in sync on the same commit. See Session 15 for the several rounds of post-launch fixes it took to get here (unpushed `vercel.json` commit, missing `/api` suffix on `VITE_API_URL`, Google origin_mismatch, stale `CLIENT_URL`).**
 
 ### A — MongoDB Atlas ✅ done
 1. [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → free M0 cluster
@@ -393,29 +400,31 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
   CLOUDINARY_API_SECRET = <from cloudinary.com dashboard>
   GOOGLE_CLIENT_ID       = <from console.cloud.google.com>
   ```
-  `CLIENT_URL` was set to a temporary `http://localhost:5173` placeholder until Vercel exists (Phase D updates it to the real value).
+  `CLIENT_URL` is now the real production Vercel domain: `https://oraita.vercel.app` (confirmed 2026-07-30 via a live CORS preflight check — `Access-Control-Allow-Origin` echoes the correct domain).
 - Uploaded images go to Cloudinary, not the local filesystem, so Render's ephemeral disk is no longer a concern for images (see Known Issue #3, updated).
+- **Free tier note**: the instance spins down after ~15 min idle; Render's own dashboard warns this "can delay requests by 50 seconds or more" on the next request. See Known Issue #9 and Session 15's `PrivateRoute` fix.
 
-### C — Vercel (frontend) 🔧 in progress
+### C — Vercel (frontend) ✅ done
 - Root directory: `oraita-web`
 - Framework: Vite (auto-detected)
 - Output directory: `dist`
-- Backend is live at `https://oraita-api.onrender.com` (confirmed 2026-07-29 via Render dashboard).
-- Environment variables:
+- Custom domain: `https://oraita.vercel.app` (renamed from the auto-generated `final-project-nu-lime.vercel.app`, which still works as an alias)
+- Environment variables (both confirmed set):
   ```
-  VITE_API_URL         = https://oraita-api.onrender.com/api
+  VITE_API_URL          = https://oraita-api.onrender.com/api
   VITE_GOOGLE_CLIENT_ID = <same value as oraita-web/.env — Google client IDs are public/client-side by design>
   ```
-  Only `VITE_API_URL` was set on the first project setup — `VITE_GOOGLE_CLIENT_ID` was missed and still needs to be added, or Google Sign-In will silently break in production (`clientId` resolves to `undefined`).
-- **First deploy failed:** `[vite]: Rolldown failed to resolve import "bootstrap/dist/css/bootstrap.min.css"`. Root cause: `bootstrap` was only ever declared as a dependency in the **root** `package.json` (used by the backend), not in `oraita-web/package.json`, even though `oraita-web/src/main.tsx` imports it directly. Locally this worked because Vite falls back to the parent `node_modules`; Vercel only installs within the configured Root Directory (`oraita-web`), so the import had nothing to resolve. Fixed 2026-07-29 by adding `"bootstrap": "^5.3.8"` as a real dependency in `oraita-web/package.json` (`npm install` run inside `oraita-web/` to update its own `package-lock.json`). Verified `npm run build` succeeds locally after the fix.
-- **After that redeploy succeeded, direct navigation to any non-root route (e.g. `/login`) 404'd** (`404: NOT_FOUND`) — Vercel serves the static `dist/` output and was looking for a physical `/login` file/route; this is a client-side React Router route that only exists once `index.html` loads and the router takes over, so a fresh visit or refresh on any path but `/` failed. Fixed 2026-07-29 by adding `oraita-web/vercel.json` with a catch-all rewrite (`"/(.*)" → "/index.html"`) so Vercel always serves `index.html` and lets React Router handle the path client-side. Redeploy to verify still pending.
+  **Footgun hit in Session 15**: `VITE_API_URL` was initially saved *without* the `/api` suffix, which 404'd every single API call in production (login, register, Google sign-in — everything). Vite bakes env vars in at build time, so fixing the dashboard value alone wasn't enough — it needed a rebuild with the build cache cleared, not just a redeploy.
+- **First deploy failed:** `[vite]: Rolldown failed to resolve import "bootstrap/dist/css/bootstrap.min.css"`. Root cause: `bootstrap` was only ever declared as a dependency in the **root** `package.json` (used by the backend), not in `oraita-web/package.json`, even though `oraita-web/src/main.tsx` imports it directly. Locally this worked because Vite falls back to the parent `node_modules`; Vercel only installs within the configured Root Directory (`oraita-web`), so the import had nothing to resolve. Fixed 2026-07-29 by adding `"bootstrap": "^5.3.8"` as a real dependency in `oraita-web/package.json`.
+- **Direct navigation to any non-root route (e.g. `/login`) 404'd** (`404: NOT_FOUND`) even after `oraita-web/vercel.json`'s catch-all rewrite was committed — turned out the commit adding it had never been pushed to `origin/main` (`git log` showed local `main` was 1 commit ahead of `origin/main`). Vercel builds from GitHub, so it had simply never seen the file. Fixed 2026-07-30 by pushing the commit; confirmed working on redeploy.
 
-### D — After both are live ⏳ not started
-- Go back to Render → update `CLIENT_URL` to the real Vercel URL → redeploy
-- Go to Google Cloud Console → OAuth 2.0 Client ID → Authorized JavaScript origins → add the Vercel URL (currently only `http://localhost:5173`/`http://localhost` are authorized — Google Sign-In will fail in production without this)
+### D — After both are live ✅ done
+- Render `CLIENT_URL` → updated to `https://oraita.vercel.app`, confirmed via live CORS preflight.
+- Google Cloud Console → OAuth 2.0 Client ID → Authorized JavaScript Origins → added `https://oraita.vercel.app` (was only `localhost`, which caused a live `origin_mismatch: 400` error on the Google sign-in screen — fixed 2026-07-30).
 
-### E — Verify ⏳ not started
-- Re-run the same manual checklist used locally (register/login, create lesson + image upload, join/leave, rate a past lesson, match-request flow) against the live URLs instead of localhost.
+### E — Verify ✅ done
+- Confirmed via both platforms' dashboards (2026-07-30): Vercel shows **Ready**, Render shows **Deployed**, both on the same latest commit (`a2e2b7f`).
+- Manually verified on the live site: register, login (email/password), create lesson, add comment — all working with no console errors referencing the old domain or CORS. Google sign-in and the match-request flow were verified earlier in the session by Shani directly (not re-run via automation this pass).
 
 ---
 
@@ -436,6 +445,8 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 7. **Image URL stored in MongoDB:** The `image` field in the `lessons` collection stores the full URL string (e.g. `http://localhost:3000/public/1234567890.jpg`). Visible in MongoDB Compass under the `lessons` collection.
 
 8. **Render Build Command must include `npm install` explicitly (FIXED 2026-07-28):** Unlike some other Node hosts, Render does not automatically run `npm install` before a custom Build Command — whatever's in that field is the entire build step. Setting it to just `npm run build` left `node_modules` completely empty, causing `tsc` to fail with `Cannot find module 'express'`/`'mongoose'`/`Cannot find name 'process'` (looked like a `dependencies`/`devDependencies` placement bug at first, but all the `@types/*` packages were already correctly placed — nothing had been installed at all). Fixed by setting the Build Command to `npm install && npm run build`.
+
+9. **Render free tier cold starts (MITIGATED 2026-07-30):** The backend spins down after ~15 min of inactivity; Render's own dashboard warns the next request "can delay requests by 50 seconds or more." This isn't fixable without a paid plan, but its main user-facing symptom — a blank white screen on protected routes while the auth check waits on a sleeping backend — is mitigated: `PrivateRoute.tsx` now shows a spinner during that wait instead of rendering nothing. See Session 15.
 
 ---
 
@@ -503,6 +514,30 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 ---
 
 ## Session Log
+
+### Session 15 (2026-07-30) — Deployment Debugging Marathon: Domain Rename, Google Auth, SPA Routing, PrivateRoute White Screen
+
+#### Context
+Continuing Session 14's deployment kickoff. Shani opened the live site and hit a string of production-only bugs, each investigated and fixed in turn over the course of the day, ending with a full verification pass confirming both platforms live and in sync.
+
+#### Google OAuth `origin_mismatch` + CORS on plain login
+First report: Google sign-in showed `origin_mismatch: 400` on Google's own screen, and plain email/password login showed a generic "שגיאה בשרת" server error. Root cause for both: Render's `CLIENT_URL` was still the placeholder from Session 14, and Google Cloud Console's Authorized JavaScript Origins only listed `localhost` — neither had been pointed at the real Vercel URL yet. Walked Shani through both dashboard fixes manually (no code changes — these are external dashboard settings, not something editable from the repo).
+
+#### Production 404 on every API call — `VITE_API_URL` missing `/api`
+A second, deeper report ("Google route returns 404") turned out to share one root cause with the CORS issue above: Vercel's `VITE_API_URL` env var was set to `https://oraita-api.onrender.com` — missing the `/api` suffix that `services/api.ts`'s fallback (`'http://localhost:3000/api'`) has. Every single request was hitting the wrong path. Fixed the env var; first attempt still failed because Vite bakes env vars in at build time and a plain Vercel "Redeploy" reuses the build cache — needed a rebuild with the cache cleared.
+
+#### Vercel SPA rewrite — committed but never pushed
+Direct navigation to `/login`/`/register` kept 404ing even though `oraita-web/vercel.json`'s catch-all rewrite had supposedly been added the day before. Investigation (`git branch -vv`) found local `main` was 1 commit ahead of `origin/main` — the commit existed only locally, so Vercel (which builds from GitHub) had never seen the file. Fixed by pushing; confirmed on redeploy.
+
+#### `PrivateRoute` white-screen bug
+Shani reported a blank/white screen when an unlogged-in user hits a protected route, and asked for a full audit + fix, suspecting a race in `AuthContext`'s `loading` state. Investigated thoroughly (including live browser reproduction of several scenarios: fresh load with no token, logout-while-on-a-protected-page, hard reload with a valid token) — `AuthContext.tsx`'s `.finally(() => setLoading(false))` genuinely always resolves `loading`; there's no infinite-hang bug. The real issue: `PrivateRoute.tsx` rendered `null` (nothing) during that check, and Render's free tier can take 30–50+ seconds to wake from a cold start, which is what actually made it read as "stuck" in production. Fixed by rendering a themed Bootstrap spinner instead of `null` while `loading` is true (`oraita-web/src/components/PrivateRoute.tsx`, commit `a2e2b7f`).
+
+Also searched the whole codebase for hardcoded references to the old Vercel domain (`final-project-nu-lime.vercel.app`) after Shani renamed the project to `oraita.vercel.app` — none found; the only "final-project" hits are the unrelated GitHub repo name.
+
+#### Final verification
+Confirmed directly via both platforms' dashboards: Vercel shows the production deployment **Ready** on commit `a2e2b7f` with both domains (`oraita.vercel.app` and the old `final-project-nu-lime.vercel.app` alias) attached; Render shows `oraita-api` **Deployed**, "Deploy live for a2e2b7f". Cross-checked `CLIENT_URL`/CORS by hitting the live backend directly with an `OPTIONS` preflight from the new origin — `Access-Control-Allow-Origin` correctly echoed `https://oraita.vercel.app`. Manually re-verified register → login → create lesson → add comment on the live site with zero console errors referencing the old domain or CORS.
+
+Side note: flagged a `vestauth` string in `dotenv`'s console output mid-session as a possible prompt-injection/supply-chain concern — traced to `node_modules/dotenv/lib/main.js` and its own CHANGELOG, confirmed as a genuine (if inappropriate) self-promotional "tip" shipped by the real `dotenv` package, not a compromise.
 
 ### Session 14 (2026-07-28) — Match-Request Bug Fixes, Gender-Restricted Matching, Visual Polish, Deployment Kickoff
 
