@@ -126,8 +126,6 @@ const generateTokens = (
     };
 };
 
-
-
 // Login existing user
 export const loginUser = async (
     req: Request,

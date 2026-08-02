@@ -1,5 +1,9 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Lesson from '../models/lessons';
+import Comment from '../models/comments';
+import MatchRequest from '../models/matchRequests';
+import User from '../models/users';
 
 // Create new lesson
 export const createLesson = async (
@@ -555,6 +559,16 @@ export const deleteLesson = async (
 
         await Lesson.findByIdAndDelete(
             lessonId
+        );
+
+        // Clean up everything that referenced this lesson
+        const lessonObjectId = new mongoose.Types.ObjectId(lessonId as string);
+
+        await Comment.deleteMany({ lesson: lessonObjectId });
+        await MatchRequest.deleteMany({ lesson: lessonObjectId });
+        await User.updateMany(
+            { favorites: lessonObjectId },
+            { $pull: { favorites: lessonObjectId } }
         );
 
         return res.status(200).json({

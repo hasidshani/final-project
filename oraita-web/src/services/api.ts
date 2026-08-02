@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+// Create an Axios instance with a base URL and timeout
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
     timeout: 10000
@@ -26,5 +26,4 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
 export default api;
