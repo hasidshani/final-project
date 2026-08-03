@@ -328,6 +328,8 @@ FinalProject/
 └── .env.example files (server + oraita-web) committed; .env never committed
 ```
 
+> `server/config/`, `server/uploads/`, and `server/utils/` were removed — leftover empty scaffolding folders from early setup, never referenced by any route or import.
+
 ---
 
 ## Deployment Guide
