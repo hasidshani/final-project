@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useDispatch, useSelector } from 'react-redux';
@@ -29,10 +29,21 @@ const STOCK_HERO_IMAGES = [
     'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=800&auto=format&fit=crop',
 ];
 
+// Real lesson photos first, topped up with stock images, always padded to a
+// FIXED count (12) so the marquee track's width is constant, then duplicated
+// once so the CSS marquee loops seamlessly.
+function buildHeroImages(lessonImages: string[]): string[] {
+    const realImages = [...new Set(lessonImages.filter(Boolean))];
+    const pool = realImages.length > 0 ? [...realImages, ...STOCK_HERO_IMAGES] : STOCK_HERO_IMAGES;
+    const trimmed = Array.from({ length: 12 }, (_, i) => pool[i % pool.length]);
+    return [...trimmed, ...trimmed];
+}
+
 function Home() {
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
     const lessons = useSelector((state: RootState) => state.lessons.list);
+    const lessonsLoading = useSelector((state: RootState) => state.lessons.loading);
 
     useEffect(() => {
         dispatch(fetchLessons());
@@ -46,15 +57,28 @@ function Home() {
         [lessons]
     );
 
-    // Real lesson photos first, topped up with stock images when there aren't
-    // enough yet, then duplicated once so the CSS marquee loops seamlessly.
-    const heroImages = useMemo(() => {
-        const realImages = [...new Set(lessons.map(l => l.image).filter(Boolean))];
-        const combined = [...realImages, ...STOCK_HERO_IMAGES];
-        while (combined.length < 8) combined.push(...STOCK_HERO_IMAGES);
-        const trimmed = combined.slice(0, 12);
-        return [...trimmed, ...trimmed];
-    }, [lessons]);
+    // The hero strip's image set is chosen ONCE, after the initial lessons
+    // fetch settles (success or fail), then frozen forever — swapping an
+    // <img src> mid-scroll has no transition and reads as the strip
+    // "jumping" to different pictures. Faded in via CSS once ready instead
+    // of popping straight from placeholder to final content.
+    const [heroImages, setHeroImages] = useState<string[]>(() => buildHeroImages([]));
+    const [heroReady, setHeroReady] = useState(false);
+    const sawLoadingRef = useRef(false);
+    const frozenRef = useRef(false);
+
+    useEffect(() => {
+        if (frozenRef.current) return;
+        if (lessonsLoading) {
+            sawLoadingRef.current = true;
+            return;
+        }
+        if (sawLoadingRef.current) {
+            frozenRef.current = true;
+            setHeroImages(buildHeroImages(lessons.map(l => l.image)));
+            setHeroReady(true);
+        }
+    }, [lessonsLoading, lessons]);
 
     const handleCategoryClick = (cat: string) => {
         dispatch(setCategoryFilter(cat));
@@ -66,7 +90,7 @@ function Home() {
 
             {/* ── Hero — scrolling photo strip behind the title ── */}
             <section className="hero-section text-center">
-                <div className="hero-marquee" aria-hidden="true">
+                <div className={`hero-marquee${heroReady ? ' hero-marquee-ready' : ''}`} aria-hidden="true">
                     <div className="hero-marquee-track">
                         {heroImages.map((src, i) => (
                             <img

@@ -134,19 +134,24 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: #1a1a1a;
 }
 
 .hero-marquee {
     position: absolute;
     inset: 0;
     overflow: hidden;
+    opacity: 0;
+    transition: opacity 1.2s ease;
 }
+
+.hero-marquee-ready { opacity: 1; }
 
 .hero-marquee-track {
     display: flex;
     height: 100%;
     width: max-content;
-    animation: hero-scroll 70s linear infinite;
+    animation: hero-scroll 110s linear infinite;
 }
 
 .hero-marquee-track img {
