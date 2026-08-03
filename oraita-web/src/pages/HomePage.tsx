@@ -26,7 +26,6 @@ const STOCK_HERO_IMAGES = [
     'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1490127252417-7c393f993ee4?q=80&w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=800&auto=format&fit=crop',
 ];
 

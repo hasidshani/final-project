@@ -14,7 +14,19 @@ Try it live: 🔗 https://oraita.vercel.app
 
 ## Screenshots
 
-_To be added — screenshots of HomePage, AllLessons, SingleLesson, Dashboard, and CreateLesson will be inserted here before submission._
+All screenshots below are from the live site at [oraita.vercel.app](https://oraita.vercel.app).
+
+| HomePage | All Lessons |
+|---|---|
+| ![HomePage](screenshots/homepage.jpg) | ![All Lessons](screenshots/alllessons.jpg) |
+
+| Single Lesson | Dashboard |
+|---|---|
+| ![Single Lesson](screenshots/singlelesson.jpg) | ![Dashboard](screenshots/dashboard.jpg) |
+
+| Create Lesson |
+|---|
+| ![Create Lesson](screenshots/createlesson.jpg) |
 
 ---
 

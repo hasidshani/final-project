@@ -161,7 +161,7 @@ Base URL: `http://localhost:3000/api`
 | DELETE | `/:id/join` | ✅ | Cancel registration (leave lesson) — validates user is a participant |
 | POST | `/:id/rate` | ✅ | Rate lesson 1-5 stars — participants only, only after lesson date has passed; updates or replaces existing rating, recomputes average |
 | PATCH | `/:id` | ✅ | Update lesson (creator only) — JOI-validated, same schema as create |
-| DELETE | `/:id` | ✅ | Delete lesson (creator only) |
+| DELETE | `/:id` | ✅ | Delete lesson (creator only) — also cascades: deletes the lesson's comments, deletes any match requests tied to it, and pulls its ID from every user's `favorites` array |
 
 ### File Upload (`/api/file`)
 | Method | Route | Auth | Description |
@@ -272,6 +272,11 @@ VITE_API_URL=http://localhost:3000/api
 ---
 
 ## Current State
+
+### ✅ Everything Working (as of 2026-08-02 — lesson deletion now cascades)
+- **Fixed: deleting a lesson left orphaned data behind** — `deleteLesson` (`server/controllers/lessonController.ts`) previously only removed the `Lesson` document itself. Any comments on it, match requests referencing it, or entries in other users' `favorites` arrays were left pointing at a lesson that no longer existed. Now, on delete, it also runs `Comment.deleteMany`, `MatchRequest.deleteMany`, and `User.updateMany` (`$pull` on `favorites`) scoped to that lesson's ID.
+- **Verified locally against real DB data**: deleted the `דוגמא` lesson (created by הודיה קקון) via the actual authenticated `DELETE /api/lessons/:id` endpoint; confirmed its 1 comment was removed (1 → 0) and the lesson itself was gone afterward. `tsc --noEmit` clean. Not yet verified against a lesson with an active favorite or match request (none existed on the test lesson) — logic is the same pattern as the comment cleanup, but that path hasn't been proven against real data yet.
+- ✅ **Committed and pushed** (commit `09ac346`, 2026-08-02) — confirmed 2026-08-03 that `main` is up to date with `origin/main`. Render redeploys from `main` automatically, so production should already be running this version (not independently re-verified live).
 
 ### ✅ Everything Working (as of 2026-07-30 — deployment complete, PrivateRoute white-screen fix)
 - **Live and verified end-to-end**: frontend at `https://oraita.vercel.app` (Vercel), backend at `https://oraita-api.onrender.com` (Render), both confirmed deployed and in sync on the latest commit via their respective dashboards. Full detail in Session 15.
@@ -495,6 +500,7 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 ✅ POST /api/lessons with image = "" (empty) → 201, allowed
 ✅ POST /api/lessons with a valid https://res.cloudinary.com/<our cloud name>/... URL → 201
 ✅ POST /api/lessons with a well-formed-prefix but malformed URI (embedded space/script tag) → 400, rejected by the added .uri() check
+✅ DELETE /api/lessons/:id as creator → 200, lesson gone AND its comments deleted (verified against real data: 1 comment → 0). Favorites/match-request cleanup paths exercised in code but not yet verified against a lesson with real favorites/match-request data attached.
 ```
 
 ---
@@ -514,6 +520,19 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 ---
 
 ## Session Log
+
+### Session 16 (2026-08-02) — Lecturer Q&A Prep + Lesson-Deletion Cascade Fix
+
+#### Context
+Shani is preparing to explain the codebase to her lecturer and worked through a series of "where is X and how do I explain it" questions: where `VITE_API_URL` is set (local `.env` vs. Vercel dashboard, and why the Vercel Sensitive-value field shows blank/placeholder — expected behavior, not a bug), where the API base URL is configured in code (`oraita-web/src/services/api.ts`), what `StrictMode`/`GoogleOAuthProvider`/Redux are and where they live (`main.tsx`, `store/`), where the MongoDB connection happens (`server/server.ts`), the Vercel/Render/Atlas three-tier architecture (frontend host vs. backend server vs. database — clarified that "the server" specifically means Render, not Atlas), and how to actually retrieve the real Atlas connection string (not stored anywhere in the repo — only in Render's env vars and Atlas itself).
+
+#### Real gap found and fixed: lesson deletion didn't cascade
+While explaining what `DELETE /api/lessons/:id` does, reviewed `deleteLesson` and found it only ran `Lesson.findByIdAndDelete` — comments, match requests, and favorites referencing that lesson were never cleaned up, leaving orphaned data behind (dangling `favorites` entries, comments/match-requests pointing at a nonexistent lesson). Shani wanted this fixed before demonstrating a delete to her lecturer.
+- `server/controllers/lessonController.ts` (`deleteLesson`) — after deleting the lesson, now also runs `Comment.deleteMany({ lesson })`, `MatchRequest.deleteMany({ lesson })`, and `User.updateMany({ favorites: lesson }, { $pull: { favorites: lesson } })`, all scoped to the deleted lesson's ObjectId.
+- Verified live against the real local dev DB: started the backend locally, found the `דוגמא` ("Example") lesson (creator: הודיה קקון), snapshotted related data first (1 comment, 0 match requests, 0 favorites referencing it), minted a short-lived JWT for the creator using the local `TOKEN_SECRET` (same payload shape `authMiddleware` expects) to call the real authenticated endpoint without needing her password, deleted it via `DELETE /api/lessons/:id`, then re-ran the snapshot: lesson gone, comment count 1 → 0. `tsc --noEmit` clean.
+- **Caveat**: the favorites/match-request cleanup paths weren't exercised against real data (this particular test lesson had none in those two categories) — same code pattern as the verified comment cleanup, but not independently proven yet.
+- **Not committed yet** — change exists only in the local working tree as of this session; see `git status`. Suggested commit message: `Fix deleteLesson to also remove its comments, match requests, and favorites` (kept separate from two unrelated pre-existing uncommitted tweaks in `oraita-web/src/services/api.ts` and `server/controllers/userController.ts`).
+- Also note: the `דוגמא` lesson used for verification is now actually gone from the local dev DB — recreate a similar lesson (ideally with a favorite + comment + match request attached) before demoing this live to the lecturer, to prove all three cleanup paths at once.
 
 ### Session 15 (2026-07-30) — Deployment Debugging Marathon: Domain Rename, Google Auth, SPA Routing, PrivateRoute White Screen
 
