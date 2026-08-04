@@ -12,6 +12,14 @@ Try it live: 🔗 https://oraita.vercel.app
 
 ---
 
+## Repository
+
+🔗 https://github.com/hasidshani/final-project (public)
+
+This is a **monorepo** — the Express backend lives at the project root and the React frontend lives in `oraita-web/`. One repository link covers both.
+
+---
+
 ## Screenshots
 
 All screenshots below are from the live site at [oraita.vercel.app](https://oraita.vercel.app).
