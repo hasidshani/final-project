@@ -39,7 +39,6 @@ router.post('/', authMiddleware, upload.single('file'), async (req: Request, res
         stream.end(req.file!.buffer);
     });
 
-    console.log('Cloudinary upload:', result.secure_url);
     return res.status(200).json({ url: result.secure_url });
 });
 

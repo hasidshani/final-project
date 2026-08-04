@@ -154,6 +154,8 @@ http://localhost:5173
 
 ## API Endpoints
 
+A ready-to-import Postman collection covering every route below is included at [`Oraita.postman_collection.json`](Oraita.postman_collection.json) (set the `BASE_URL` collection variable, then `ACCESS_TOKEN` after logging in).
+
 Base URL: `http://localhost:3000/api`
 
 Protected routes require the header:

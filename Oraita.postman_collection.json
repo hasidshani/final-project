@@ -1,0 +1,321 @@
+{
+  "info": {
+    "name": "Oraita (אורייתא) API",
+    "description": "Torah lessons platform — full API collection. Set the BASE_URL and ACCESS_TOKEN environment variables (or edit the collection variables below) before running requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "BASE_URL", "value": "http://localhost:3000/api" },
+    { "key": "ACCESS_TOKEN", "value": "" },
+    { "key": "REFRESH_TOKEN", "value": "" },
+    { "key": "LESSON_ID", "value": "" },
+    { "key": "USER_ID", "value": "" },
+    { "key": "COMMENT_ID", "value": "" },
+    { "key": "MATCH_REQUEST_ID", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/users/register", "host": ["{{BASE_URL}}"], "path": ["users", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/users/login", "host": ["{{BASE_URL}}"], "path": ["users", "login"] }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE_URL}}/users/me", "host": ["{{BASE_URL}}"], "path": ["users", "me"] }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/users/refresh", "host": ["{{BASE_URL}}"], "path": ["users", "refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/users/logout", "host": ["{{BASE_URL}}"], "path": ["users", "logout"] }
+          }
+        },
+        {
+          "name": "Google Sign-In",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"credential\": \"<google-id-token>\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/users/google", "host": ["{{BASE_URL}}"], "path": ["users", "google"] }
+          }
+        },
+        {
+          "name": "Update Phone",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0501234567\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/users/phone", "host": ["{{BASE_URL}}"], "path": ["users", "phone"] }
+          }
+        },
+        {
+          "name": "Update Match Preference",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"openToMatch\": true,\n  \"gender\": \"זכר\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/users/match-preference", "host": ["{{BASE_URL}}"], "path": ["users", "match-preference"] }
+          }
+        },
+        {
+          "name": "Add Favorite",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE_URL}}/users/favorites/{{LESSON_ID}}", "host": ["{{BASE_URL}}"], "path": ["users", "favorites", "{{LESSON_ID}}"] }
+          }
+        },
+        {
+          "name": "Remove Favorite",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE_URL}}/users/favorites/{{LESSON_ID}}", "host": ["{{BASE_URL}}"], "path": ["users", "favorites", "{{LESSON_ID}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lessons",
+      "item": [
+        {
+          "name": "Get All Lessons",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE_URL}}/lessons", "host": ["{{BASE_URL}}"], "path": ["lessons"] }
+          }
+        },
+        {
+          "name": "Get Single Lesson",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE_URL}}/lessons/{{LESSON_ID}}", "host": ["{{BASE_URL}}"], "path": ["lessons", "{{LESSON_ID}}"] }
+          }
+        },
+        {
+          "name": "Create Lesson",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"שיעור לדוגמה\",\n  \"description\": \"תיאור השיעור\",\n  \"category\": \"הלכה\",\n  \"city\": \"נתניה\",\n  \"date\": \"2026-12-01\",\n  \"time\": \"20:00\",\n  \"image\": \"\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/lessons", "host": ["{{BASE_URL}}"], "path": ["lessons"] }
+          }
+        },
+        {
+          "name": "Update Lesson (creator only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"שיעור מעודכן\",\n  \"description\": \"תיאור מעודכן\",\n  \"category\": \"הלכה\",\n  \"city\": \"נתניה\",\n  \"date\": \"2026-12-01\",\n  \"time\": \"20:30\",\n  \"image\": \"\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/lessons/{{LESSON_ID}}", "host": ["{{BASE_URL}}"], "path": ["lessons", "{{LESSON_ID}}"] }
+          }
+        },
+        {
+          "name": "Delete Lesson (creator only)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE_URL}}/lessons/{{LESSON_ID}}", "host": ["{{BASE_URL}}"], "path": ["lessons", "{{LESSON_ID}}"] }
+          }
+        },
+        {
+          "name": "Join Lesson",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE_URL}}/lessons/{{LESSON_ID}}/join", "host": ["{{BASE_URL}}"], "path": ["lessons", "{{LESSON_ID}}", "join"] }
+          }
+        },
+        {
+          "name": "Leave Lesson",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE_URL}}/lessons/{{LESSON_ID}}/join", "host": ["{{BASE_URL}}"], "path": ["lessons", "{{LESSON_ID}}", "join"] }
+          }
+        },
+        {
+          "name": "Rate Lesson",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": 5\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/lessons/{{LESSON_ID}}/rate", "host": ["{{BASE_URL}}"], "path": ["lessons", "{{LESSON_ID}}", "rate"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Upload",
+      "item": [
+        {
+          "name": "Upload Image",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "" }]
+            },
+            "url": { "raw": "{{BASE_URL}}/file", "host": ["{{BASE_URL}}"], "path": ["file"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "Get Comments for Lesson",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE_URL}}/comments/lesson/{{LESSON_ID}}", "host": ["{{BASE_URL}}"], "path": ["comments", "lesson", "{{LESSON_ID}}"] }
+          }
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"תגובה לדוגמה\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/comments/{{LESSON_ID}}", "host": ["{{BASE_URL}}"], "path": ["comments", "{{LESSON_ID}}"] }
+          }
+        },
+        {
+          "name": "Delete Comment (owner only)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE_URL}}/comments/{{COMMENT_ID}}", "host": ["{{BASE_URL}}"], "path": ["comments", "{{COMMENT_ID}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Match Requests",
+      "item": [
+        {
+          "name": "Get My Match Requests",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE_URL}}/matchrequests/me", "host": ["{{BASE_URL}}"], "path": ["matchrequests", "me"] }
+          }
+        },
+        {
+          "name": "Send Match Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lessonId\": \"{{LESSON_ID}}\",\n  \"note\": \"נעים להכיר!\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/matchrequests/{{USER_ID}}", "host": ["{{BASE_URL}}"], "path": ["matchrequests", "{{USER_ID}}"] }
+          }
+        },
+        {
+          "name": "Respond to Match Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/matchrequests/{{MATCH_REQUEST_ID}}", "host": ["{{BASE_URL}}"], "path": ["matchrequests", "{{MATCH_REQUEST_ID}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}
