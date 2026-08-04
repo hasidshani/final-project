@@ -252,7 +252,7 @@ One request per ordered pair while pending/accepted (enforced in the controller,
 ```
 PORT=3000
 DATABASE_URL=mongodb://localhost/oraita_db
-TOKEN_SECRET=mySuperSecretKey123
+TOKEN_SECRET=<a long random string — never a real value in docs>
 TOKEN_EXPIRATION=1h
 REFRESH_TOKEN_EXPIRATION=7d
 CLIENT_URL=http://localhost:5173
