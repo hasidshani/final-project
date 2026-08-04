@@ -28,64 +28,63 @@ function Navbar() {
 
     return (
         <nav className="navbar navbar-expand-lg bg-white border-bottom px-4 py-3">
-            <div className="d-flex flex-wrap justify-content-between align-items-center w-100">
-                <Link to="/" className="fw-bold fs-5 text-dark text-decoration-none" onClick={() => setMenuOpen(false)}>
-                    אורייתא ✡
-                </Link>
+            <Link to="/" className="navbar-brand fw-bold fs-5 text-dark text-decoration-none" onClick={() => setMenuOpen(false)}>
+                אורייתא ✡
+            </Link>
 
-                {/* Hamburger — hidden at lg and up, where the menu is always shown inline */}
-                <button
-                    type="button"
-                    className="navbar-toggler"
-                    aria-label="פתיחת תפריט"
-                    aria-expanded={menuOpen}
-                    onClick={() => setMenuOpen(open => !open)}
-                >
-                    <span className="navbar-toggler-icon"></span>
-                </button>
+            {/* Hamburger — hidden at lg and up, where the menu is always shown inline */}
+            <button
+                type="button"
+                className="navbar-toggler"
+                aria-label="פתיחת תפריט"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen(open => !open)}
+            >
+                <span className="navbar-toggler-icon"></span>
+            </button>
 
-                {/* Links + auth actions — collapses into a stacked dropdown below lg */}
-                <div className={`navbar-collapse flex-grow-0 ${menuOpen ? '' : 'collapse'}`}>
-                    <div className="d-flex flex-column flex-lg-row align-items-lg-center gap-3 gap-lg-4 mt-3 mt-lg-0">
-                        <ul className="list-unstyled d-flex flex-column flex-lg-row gap-2 gap-lg-3 mb-0">
-                            {navLinks.map(link => (
-                                <li key={link.to}>
-                                    <Link
-                                        to={link.to}
-                                        className="nav-link text-muted fw-semibold position-relative"
-                                        onClick={() => setMenuOpen(false)}
-                                    >
-                                        {link.label}
-                                        {link.badge > 0 && (
-                                            <span className="badge rounded-pill bg-danger ms-1">{link.badge}</span>
-                                        )}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+            {/* Links + auth actions — collapses into a stacked dropdown below lg.
+                me-lg-auto on the links keeps them tight against the brand on
+                desktop (RTL: margin-inline-end = left), pushing the auth block
+                to the far side instead of the whole group drifting together. */}
+            <div className={`navbar-collapse ${menuOpen ? 'show' : 'collapse'}`}>
+                <ul className="navbar-nav list-unstyled d-flex flex-column flex-lg-row gap-2 gap-lg-3 me-lg-auto mb-0 mt-3 mt-lg-0">
+                    {navLinks.map(link => (
+                        <li className="nav-item" key={link.to}>
+                            <Link
+                                to={link.to}
+                                className="nav-link text-muted fw-semibold position-relative"
+                                onClick={() => setMenuOpen(false)}
+                            >
+                                {link.label}
+                                {link.badge > 0 && (
+                                    <span className="badge rounded-pill bg-danger ms-1">{link.badge}</span>
+                                )}
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
 
-                        <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3 ms-lg-auto">
-                            {user ? (
-                                <>
-                                    <Link
-                                        to="/createlesson"
-                                        className="btn btn-gold btn-sm text-decoration-none"
-                                        onClick={() => setMenuOpen(false)}
-                                    >
-                                        יצירת שיעור ⊕
-                                    </Link>
-                                    <span className="text-muted small">שלום, {user.name}</span>
-                                    <button onClick={handleLogout} className="btn btn-outline-secondary btn-sm">
-                                        התנתקות
-                                    </button>
-                                </>
-                            ) : (
-                                <Link to="/login" className="nav-link" onClick={() => setMenuOpen(false)}>
-                                    התחברות 👤
-                                </Link>
-                            )}
-                        </div>
-                    </div>
+                <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3 mt-3 mt-lg-0">
+                    {user ? (
+                        <>
+                            <Link
+                                to="/createlesson"
+                                className="btn btn-gold btn-sm text-decoration-none"
+                                onClick={() => setMenuOpen(false)}
+                            >
+                                יצירת שיעור ⊕
+                            </Link>
+                            <span className="text-muted small">שלום, {user.name}</span>
+                            <button onClick={handleLogout} className="btn btn-outline-secondary btn-sm">
+                                התנתקות
+                            </button>
+                        </>
+                    ) : (
+                        <Link to="/login" className="nav-link" onClick={() => setMenuOpen(false)}>
+                            התחברות 👤
+                        </Link>
+                    )}
                 </div>
             </div>
         </nav>

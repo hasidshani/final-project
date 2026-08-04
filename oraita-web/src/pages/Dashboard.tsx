@@ -288,11 +288,11 @@ function Dashboard() {
 
                     {/* Tabs — .map() over TABS array */}
                     <div className="card-header bg-white border-0 pt-3 px-3 pb-0">
-                        <ul className="nav nav-tabs border-0">
+                        <ul className="nav nav-tabs border-0 flex-nowrap overflow-x-auto pb-1">
                             {TABS.map(tab => (
-                                <li key={tab.key} className="nav-item">
+                                <li key={tab.key} className="nav-item flex-shrink-0">
                                     <button
-                                        className={`nav-link ${activeTab === tab.key ? 'active fw-bold' : 'text-muted'}`}
+                                        className={`nav-link text-nowrap ${activeTab === tab.key ? 'active fw-bold' : 'text-muted'}`}
                                         onClick={() => setActiveTab(tab.key)}
                                     >
                                         {tab.label}
