@@ -44,49 +44,51 @@ function Navbar() {
             </button>
 
             {/* Links + auth actions — collapses into a stacked dropdown below lg.
-                This project ships plain (non-RTL) bootstrap.min.css, so ms-/me-
-                utilities compile to physical margin-left/margin-right, NOT
-                direction-aware logical properties — ms-lg-auto (margin-left:auto)
-                is what actually pins the auth block to the visual left on
-                desktop, keeping the links naturally adjacent to the brand. */}
+                Uses justify-content-lg-between (not an ms-/me-auto margin
+                utility) to split the two groups apart, since justify-content
+                genuinely respects dir="rtl" — this project's plain (non-RTL)
+                bootstrap.min.css compiles ms-/me- utilities to hard-coded
+                physical margin-left/margin-right, which doesn't. */}
             <div className={`navbar-collapse ${menuOpen ? 'show' : 'collapse'}`}>
-                <ul className="navbar-nav list-unstyled d-flex flex-column flex-lg-row gap-2 gap-lg-3 mb-0 mt-3 mt-lg-0">
-                    {navLinks.map(link => (
-                        <li className="nav-item" key={link.to}>
-                            <Link
-                                to={link.to}
-                                className="nav-link text-muted fw-semibold position-relative"
-                                onClick={() => setMenuOpen(false)}
-                            >
-                                {link.label}
-                                {link.badge > 0 && (
-                                    <span className="badge rounded-pill bg-danger ms-1">{link.badge}</span>
-                                )}
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
+                <div className="d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center gap-3 gap-lg-4 w-100 mt-3 mt-lg-0">
+                    <ul className="navbar-nav list-unstyled d-flex flex-column flex-lg-row gap-2 gap-lg-3 mb-0">
+                        {navLinks.map(link => (
+                            <li className="nav-item" key={link.to}>
+                                <Link
+                                    to={link.to}
+                                    className="nav-link text-muted fw-semibold position-relative"
+                                    onClick={() => setMenuOpen(false)}
+                                >
+                                    {link.label}
+                                    {link.badge > 0 && (
+                                        <span className="badge rounded-pill bg-danger ms-1">{link.badge}</span>
+                                    )}
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
 
-                <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3 ms-lg-auto mt-3 mt-lg-0">
-                    {user ? (
-                        <>
-                            <Link
-                                to="/createlesson"
-                                className="btn btn-gold btn-sm text-decoration-none"
-                                onClick={() => setMenuOpen(false)}
-                            >
-                                יצירת שיעור ⊕
+                    <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3">
+                        {user ? (
+                            <>
+                                <Link
+                                    to="/createlesson"
+                                    className="btn btn-gold btn-sm text-decoration-none"
+                                    onClick={() => setMenuOpen(false)}
+                                >
+                                    יצירת שיעור ⊕
+                                </Link>
+                                <span className="text-muted small">שלום, {user.name}</span>
+                                <button onClick={handleLogout} className="btn btn-outline-secondary btn-sm">
+                                    התנתקות
+                                </button>
+                            </>
+                        ) : (
+                            <Link to="/login" className="nav-link" onClick={() => setMenuOpen(false)}>
+                                התחברות 👤
                             </Link>
-                            <span className="text-muted small">שלום, {user.name}</span>
-                            <button onClick={handleLogout} className="btn btn-outline-secondary btn-sm">
-                                התנתקות
-                            </button>
-                        </>
-                    ) : (
-                        <Link to="/login" className="nav-link" onClick={() => setMenuOpen(false)}>
-                            התחברות 👤
-                        </Link>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
         </nav>
