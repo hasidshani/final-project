@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 function Navbar() {
     const { user, logout, pendingMatchCount } = useAuth();
     const navigate = useNavigate();
+    const [menuOpen, setMenuOpen] = useState(false);
 
     const handleLogout = async () => {
+        setMenuOpen(false);
         await logout();
         navigate('/');
     };
@@ -24,45 +27,66 @@ function Navbar() {
     ];
 
     return (
-        <nav className="navbar bg-white border-bottom px-4 py-3">
-            <div className="d-flex justify-content-between align-items-center w-100">
+        <nav className="navbar navbar-expand-lg bg-white border-bottom px-4 py-3">
+            <div className="d-flex flex-wrap justify-content-between align-items-center w-100">
+                <Link to="/" className="fw-bold fs-5 text-dark text-decoration-none" onClick={() => setMenuOpen(false)}>
+                    אורייתא ✡
+                </Link>
 
-                {/* Right side — logo + links */}
-                <div className="d-flex align-items-center gap-4">
-                    <Link to="/" className="fw-bold fs-5 text-dark text-decoration-none">
-                        אורייתא ✡
-                    </Link>
-                    <ul className="list-unstyled d-flex gap-3 mb-0">
-                        {navLinks.map(link => (
-                            <li key={link.to}>
-                                <Link to={link.to} className="nav-link text-muted fw-semibold position-relative">
-                                    {link.label}
-                                    {link.badge > 0 && (
-                                        <span className="badge rounded-pill bg-danger ms-1">{link.badge}</span>
-                                    )}
+                {/* Hamburger — hidden at lg and up, where the menu is always shown inline */}
+                <button
+                    type="button"
+                    className="navbar-toggler"
+                    aria-label="פתיחת תפריט"
+                    aria-expanded={menuOpen}
+                    onClick={() => setMenuOpen(open => !open)}
+                >
+                    <span className="navbar-toggler-icon"></span>
+                </button>
+
+                {/* Links + auth actions — collapses into a stacked dropdown below lg */}
+                <div className={`navbar-collapse flex-grow-0 ${menuOpen ? '' : 'collapse'}`}>
+                    <div className="d-flex flex-column flex-lg-row align-items-lg-center gap-3 gap-lg-4 mt-3 mt-lg-0">
+                        <ul className="list-unstyled d-flex flex-column flex-lg-row gap-2 gap-lg-3 mb-0">
+                            {navLinks.map(link => (
+                                <li key={link.to}>
+                                    <Link
+                                        to={link.to}
+                                        className="nav-link text-muted fw-semibold position-relative"
+                                        onClick={() => setMenuOpen(false)}
+                                    >
+                                        {link.label}
+                                        {link.badge > 0 && (
+                                            <span className="badge rounded-pill bg-danger ms-1">{link.badge}</span>
+                                        )}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3 ms-lg-auto">
+                            {user ? (
+                                <>
+                                    <Link
+                                        to="/createlesson"
+                                        className="btn btn-gold btn-sm text-decoration-none"
+                                        onClick={() => setMenuOpen(false)}
+                                    >
+                                        יצירת שיעור ⊕
+                                    </Link>
+                                    <span className="text-muted small">שלום, {user.name}</span>
+                                    <button onClick={handleLogout} className="btn btn-outline-secondary btn-sm">
+                                        התנתקות
+                                    </button>
+                                </>
+                            ) : (
+                                <Link to="/login" className="nav-link" onClick={() => setMenuOpen(false)}>
+                                    התחברות 👤
                                 </Link>
-                            </li>
-                        ))}
-                    </ul>
+                            )}
+                        </div>
+                    </div>
                 </div>
-
-                {/* Left side — auth actions */}
-                <div className="d-flex align-items-center gap-3">
-                    {user ? (
-                        <>
-                            <Link to="/createlesson" className="btn btn-gold btn-sm text-decoration-none">
-                                יצירת שיעור ⊕
-                            </Link>
-                            <span className="text-muted small">שלום, {user.name}</span>
-                            <button onClick={handleLogout} className="btn btn-outline-secondary btn-sm">
-                                התנתקות
-                            </button>
-                        </>
-                    ) : (
-                        <Link to="/login" className="nav-link">התחברות 👤</Link>
-                    )}
-                </div>
-
             </div>
         </nav>
     );

@@ -82,7 +82,7 @@ function ParticipantRow({
         const previouslyDeclined = relation?.status === 'declined' && relation.from._id === currentUserId;
 
         leftContent = composing ? (
-            <div className="d-flex flex-column gap-1 text-end" style={{ minWidth: 260 }}>
+            <div className="d-flex flex-column gap-1 text-end" style={{ minWidth: 'min(260px, 100%)' }}>
                 <textarea
                     className="form-control form-control-sm"
                     placeholder="הודעה קצרה (לא חובה)"

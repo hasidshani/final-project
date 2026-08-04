@@ -230,3 +230,13 @@ body {
 @media (max-width: 576px) {
     .about-card-frame { outline-offset: 6px; }
 }
+
+/* ── Navbar mobile dropdown — below lg the collapsible menu wraps onto a
+   full-width panel under the bar instead of squeezing into the header row ── */
+@media (max-width: 991.98px) {
+    nav.navbar .navbar-collapse {
+        width: 100%;
+        border-top: 1px solid #eee;
+        padding-top: 12px;
+    }
+}
