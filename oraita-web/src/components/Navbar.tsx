@@ -44,11 +44,13 @@ function Navbar() {
             </button>
 
             {/* Links + auth actions — collapses into a stacked dropdown below lg.
-                me-lg-auto on the links keeps them tight against the brand on
-                desktop (RTL: margin-inline-end = left), pushing the auth block
-                to the far side instead of the whole group drifting together. */}
+                This project ships plain (non-RTL) bootstrap.min.css, so ms-/me-
+                utilities compile to physical margin-left/margin-right, NOT
+                direction-aware logical properties — ms-lg-auto (margin-left:auto)
+                is what actually pins the auth block to the visual left on
+                desktop, keeping the links naturally adjacent to the brand. */}
             <div className={`navbar-collapse ${menuOpen ? 'show' : 'collapse'}`}>
-                <ul className="navbar-nav list-unstyled d-flex flex-column flex-lg-row gap-2 gap-lg-3 me-lg-auto mb-0 mt-3 mt-lg-0">
+                <ul className="navbar-nav list-unstyled d-flex flex-column flex-lg-row gap-2 gap-lg-3 mb-0 mt-3 mt-lg-0">
                     {navLinks.map(link => (
                         <li className="nav-item" key={link.to}>
                             <Link
@@ -65,7 +67,7 @@ function Navbar() {
                     ))}
                 </ul>
 
-                <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3 mt-3 mt-lg-0">
+                <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3 ms-lg-auto mt-3 mt-lg-0">
                     {user ? (
                         <>
                             <Link
