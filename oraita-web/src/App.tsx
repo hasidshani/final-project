@@ -8,6 +8,7 @@ const Login         = lazy(() => import('./pages/Login'));
 const Register      = lazy(() => import('./pages/Register'));
 const Dashboard     = lazy(() => import('./pages/Dashboard'));
 const Profile       = lazy(() => import('./pages/Profile'));
+const UserProfile   = lazy(() => import('./pages/UserProfilePage'));
 const CreateLesson  = lazy(() => import('./pages/CreateLesson'));
 const AllLessons    = lazy(() => import('./pages/AllLessons'));
 const SingleLesson  = lazy(() => import('./pages/SingleLesson'));
@@ -36,6 +37,9 @@ function App() {
                     } />
                     <Route path="/profile" element={
                         <PrivateRoute><Profile /></PrivateRoute>
+                    } />
+                    <Route path="/user/:id" element={
+                        <PrivateRoute><UserProfile /></PrivateRoute>
                     } />
                     <Route path="/createlesson" element={
                         <PrivateRoute><CreateLesson /></PrivateRoute>

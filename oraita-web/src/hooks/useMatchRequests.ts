@@ -6,6 +6,7 @@ export interface MatchRequestParty {
     _id: string;
     name: string;
     phone?: string; // only present once the request is accepted
+    profilePicture?: string;
 }
 
 export interface MatchRequest {

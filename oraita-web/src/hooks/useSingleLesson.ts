@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 interface LessonCreator { _id: string; name: string; email: string; profilePicture?: string; }
-interface Participant   { _id: string; name: string; openToMatch?: boolean; gender?: 'זכר' | 'נקבה'; }
+interface Participant   { _id: string; name: string; openToMatch?: boolean; gender?: 'זכר' | 'נקבה'; profilePicture?: string; }
 
 export interface SingleLessonData {
     _id: string;

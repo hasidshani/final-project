@@ -196,8 +196,8 @@ export const getMyMatchRequests = async (
         const matchRequests = await MatchRequest.find({
             $or: [{ from: userId }, { to: userId }]
         })
-            .populate('from', 'name phone')
-            .populate('to', 'name phone')
+            .populate('from', 'name phone profilePicture')
+            .populate('to', 'name phone profilePicture')
             .populate('lesson', 'title')
             .sort({ createdAt: -1 });
 

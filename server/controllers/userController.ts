@@ -4,6 +4,7 @@ import {
     NextFunction
 } from 'express';
 import User from '../models/users';
+import MatchRequest from '../models/matchRequests';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { OAuth2Client } from 'google-auth-library';
@@ -456,6 +457,49 @@ export const getMe = async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
         return res.status(200).json({ success: true, user });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+// Get another user's public profile (name, profile picture, gender). Phone
+// is only included if the viewer and target have an accepted match request
+// between them — this is the one other place (besides getMyMatchRequests)
+// a phone number is ever exposed, and the same rule is enforced here.
+export const getUserById = async (req: Request, res: Response) => {
+    const viewerId = req.userId as string;
+    const targetId = req.params.id;
+
+    try {
+        const target = await User.findById(targetId).select('name profilePicture gender phone');
+
+        if (!target) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const acceptedMatch = viewerId === targetId
+            ? null
+            : await MatchRequest.findOne({
+                $or: [
+                    { from: viewerId, to: targetId },
+                    { from: targetId, to: viewerId }
+                ],
+                status: 'accepted'
+            });
+
+        return res.status(200).json({
+            success: true,
+            user: {
+                _id: target._id,
+                name: target.name,
+                profilePicture: target.profilePicture,
+                gender: target.gender,
+                ...(acceptedMatch ? { phone: target.phone } : {})
+            }
+        });
     } catch (error) {
         return res.status(400).json({
             success: false,

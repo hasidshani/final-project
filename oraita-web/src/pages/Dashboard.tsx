@@ -108,7 +108,12 @@ function MatchRequestRow({ request, mode, onRespond }: {
     return (
         <div className="d-flex justify-content-between align-items-start py-3 border-bottom text-end">
             <div>
-                <h6 className="fw-bold mb-1">{other.name}</h6>
+                <Link to={`/user/${other._id}`} className="d-flex align-items-center gap-2 mb-1 text-decoration-none text-dark">
+                    <h6 className="fw-bold mb-0">{other.name}</h6>
+                    <div className="avatar-sm">
+                        {other.profilePicture ? <img src={other.profilePicture} alt={other.name} /> : '👤'}
+                    </div>
+                </Link>
                 <p className="text-muted small mb-1">שיתוף שיעור: {request.lesson.title}</p>
                 {request.note && <p className="small mb-1 fst-italic">"{request.note}"</p>}
                 {mode === 'accepted' && <p className="small mb-0">📞 {other.phone}</p>}

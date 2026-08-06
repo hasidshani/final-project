@@ -10,7 +10,7 @@ import type { MatchRequest } from '../hooks/useMatchRequests';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1200&auto=format&fit=crop';
 
-type ParticipantInfo = { _id: string; name: string; openToMatch?: boolean; gender?: 'זכר' | 'נקבה' };
+type ParticipantInfo = { _id: string; name: string; openToMatch?: boolean; gender?: 'זכר' | 'נקבה'; profilePicture?: string };
 
 // One row in the participants list — handles its own request/respond UI so
 // the page component doesn't have to track per-row state.
@@ -109,11 +109,26 @@ function ParticipantRow({
         );
     }
 
+    const nameWithAvatar = (
+        <>
+            <span className="fw-semibold small">{participant.name}</span>
+            <div className="avatar-sm">
+                {participant.profilePicture ? <img src={participant.profilePicture} alt={participant.name} /> : '👤'}
+            </div>
+        </>
+    );
+
     return (
         <li className="list-group-item text-end px-0">
             <div className="d-flex justify-content-between align-items-center">
                 {leftContent}
-                <span className="fw-semibold small">{participant.name}</span>
+                {isSelf ? (
+                    <div className="d-flex align-items-center gap-2">{nameWithAvatar}</div>
+                ) : (
+                    <Link to={`/user/${participant._id}`} className="d-flex align-items-center gap-2 text-decoration-none text-dark">
+                        {nameWithAvatar}
+                    </Link>
+                )}
             </div>
             {rowError && <div className="text-danger small mt-1">{rowError}</div>}
         </li>

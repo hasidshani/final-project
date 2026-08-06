@@ -256,6 +256,27 @@ body {
     .about-card-frame { outline-offset: 6px; }
 }
 
+/* ── Avatar cropper modal (Profile page — reposition/zoom a picked picture before upload) ── */
+.cropper-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    padding: 16px;
+}
+.cropper-frame {
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #222;
+    touch-action: none;
+    cursor: grab;
+}
+.cropper-frame:active { cursor: grabbing; }
+
 /* ── Navbar mobile dropdown — below lg the collapsible menu wraps onto a
    full-width panel under the bar instead of squeezing into the header row ── */
 @media (max-width: 991.98px) {

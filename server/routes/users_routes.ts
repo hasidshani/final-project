@@ -12,7 +12,8 @@ import {
     updatePhone,
     updateProfile,
     changePassword,
-    updateMatchPreference
+    updateMatchPreference,
+    getUserById
 } from '../controllers/userController';
 
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -24,6 +25,9 @@ const router = express.Router();
 
 // Get current logged-in user
 router.get('/me', authMiddleware, getMe);
+
+// Get another user's public profile (name, profile picture, gender; phone only if an accepted match exists)
+router.get('/:id', authMiddleware, getUserById);
 
 // Register user
 router.post('/register', authLimiter, validate(registerSchema), registerUser);

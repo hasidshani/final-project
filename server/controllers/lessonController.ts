@@ -153,7 +153,7 @@ export const getLessonById = async (
                     // (see matchRequestController). Gender is needed client-side
                     // to only offer the "create contact" button across genders.
                     'participants',
-                    'name email openToMatch gender'
+                    'name email openToMatch gender profilePicture'
                 );
         }
 

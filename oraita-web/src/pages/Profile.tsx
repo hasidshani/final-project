@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import Layout from '../components/Layout';
+import AvatarCropper from '../components/AvatarCropper';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -26,6 +27,7 @@ function Profile() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imgSrc, setImgSrc]       = useState(user?.profilePicture ?? '');
     const [pictureRemoved, setPictureRemoved] = useState(false);
+    const [cropFile, setCropFile]   = useState<File | null>(null);
     const [profileError, setProfileError]     = useState('');
     const [profileSuccess, setProfileSuccess] = useState('');
     const [savingProfile, setSavingProfile]   = useState(false);
@@ -45,10 +47,20 @@ function Profile() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setImageFile(file);
-            setImgSrc(URL.createObjectURL(file));
-            setPictureRemoved(false);
+            setCropFile(file);
         }
+        e.target.value = '';
+    };
+
+    const handleCropConfirm = (croppedFile: File, previewUrl: string) => {
+        setImageFile(croppedFile);
+        setImgSrc(previewUrl);
+        setPictureRemoved(false);
+        setCropFile(null);
+    };
+
+    const handleCropCancel = () => {
+        setCropFile(null);
     };
 
     const handleRemovePicture = () => {
@@ -294,6 +306,14 @@ function Profile() {
 
                 </main>
             </div>
+
+            {cropFile && (
+                <AvatarCropper
+                    file={cropFile}
+                    onConfirm={handleCropConfirm}
+                    onCancel={handleCropCancel}
+                />
+            )}
         </Layout>
     );
 }
