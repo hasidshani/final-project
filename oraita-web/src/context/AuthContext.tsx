@@ -11,6 +11,7 @@ interface AuthUser {
     openToMatch?: boolean;
     gender?: 'זכר' | 'נקבה';
     favorites?: string[];
+    profilePicture?: string;
 }
 
 interface AuthContextType {

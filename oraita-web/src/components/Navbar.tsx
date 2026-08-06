@@ -78,7 +78,13 @@ function Navbar() {
                                 >
                                     יצירת שיעור ⊕
                                 </Link>
-                                <span className="text-muted small">שלום, {user.name}</span>
+                                <Link
+                                    to="/profile"
+                                    className="text-muted small text-decoration-none"
+                                    onClick={() => setMenuOpen(false)}
+                                >
+                                    שלום, {user.name} ⚙️
+                                </Link>
                                 <button onClick={handleLogout} className="btn btn-outline-secondary btn-sm">
                                     התנתקות
                                 </button>

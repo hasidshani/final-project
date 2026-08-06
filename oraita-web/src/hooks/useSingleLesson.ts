@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-interface LessonCreator { _id: string; name: string; email: string; }
+interface LessonCreator { _id: string; name: string; email: string; profilePicture?: string; }
 interface Participant   { _id: string; name: string; openToMatch?: boolean; gender?: 'זכר' | 'נקבה'; }
 
 export interface SingleLessonData {

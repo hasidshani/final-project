@@ -35,6 +35,7 @@ export function useTeacherProfile(teacherId: string | undefined) {
     );
 
     const creatorName = allLessons[0]?.creator.name ?? '';
+    const creatorPicture = allLessons[0]?.creator.profilePicture ?? '';
 
     const cities = useMemo(
         () => [...new Set(allLessons.map(l => l.city))].join(', '),
@@ -53,6 +54,7 @@ export function useTeacherProfile(teacherId: string | undefined) {
         loading,
         error,
         creatorName,
+        creatorPicture,
         cities,
         avgRating,
         totalCount: allLessons.length,

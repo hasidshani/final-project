@@ -97,7 +97,7 @@ export const getAllLessons = async (
             await Lesson.find()
                 .populate(
                     'creator',
-                    'name email'
+                    'name email profilePicture'
                 )
                 .sort({
                     date: 1
@@ -142,7 +142,7 @@ export const getLessonById = async (
             Lesson.findById(lessonId)
                 .populate(
                     'creator',
-                    'name email'
+                    'name email profilePicture'
                 );
 
         if (isAuthenticated) {

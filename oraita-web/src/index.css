@@ -84,6 +84,31 @@ body {
     border: 4px solid #fff;
     margin: -60px auto 20px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ── Small avatar — comment rows, teacher sidebar card ── */
+.avatar-sm {
+    width: 36px;
+    height: 36px;
+    background-color: #f0f0f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.avatar-sm img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 /* ── Input with floating icon (Login / Register) ── */

@@ -66,13 +66,13 @@ FinalProject/
 │   ├── types/
 │   │   └── express.d.ts             ← extends Request with userId?: string
 │   ├── models/
-│   │   ├── users.ts                 ← User schema (name, email, password, phone, favorites, refreshTokens, openToMatch, gender)
+│   │   ├── users.ts                 ← User schema (name, email, password, phone, profilePicture, favorites, refreshTokens, openToMatch, gender)
 │   │   ├── lessons.ts               ← Lesson schema (title, description, category, city, date, time, image, creator, participants, maxParticipants, rating)
 │   │   └── comments.ts              ← Comment schema (lesson, user, text)
 │   ├── controllers/
-│   │   ├── userController.ts        ← register, login, logout, refresh, getMe, addFavorite, removeFavorite (auth error messages in Hebrew)
-│   │   ├── lessonController.ts      ← createLesson reads image from req.body (URL string, not req.file); updateLesson (creator-only edit)
-│   │   └── commentController.ts     ← createComment, getCommentsByLesson, deleteComment
+│   │   ├── userController.ts        ← register, login, logout, refresh, getMe, addFavorite, removeFavorite, updateProfile, changePassword (auth error messages in Hebrew)
+│   │   ├── lessonController.ts      ← createLesson reads image from req.body (URL string, not req.file); updateLesson (creator-only edit); creator populate includes profilePicture
+│   │   └── commentController.ts     ← createComment, getCommentsByLesson (user populate includes profilePicture), deleteComment
 │   ├── routes/
 │   │   ├── users_routes.ts          ← /api/users/*
 │   │   ├── lessons_routes.ts        ← /api/lessons/* (POST / is JSON — no multer here anymore; PATCH /:id for creator-only edit)
@@ -86,8 +86,9 @@ FinalProject/
 │   │   ├── upload.ts                ← dead code — old disk-storage Multer config from the pre-Cloudinary flow, not imported anywhere (file_routes.ts has its own inline memoryStorage config)
 │   │   └── rateLimiter.ts           ← apiLimiter (300/15min) + authLimiter (10/15min, skipSuccessfulRequests — only failed attempts count)
 │   └── validation/
-│       ├── userValidation.ts        ← registerSchema, loginSchema, updatePhoneSchema (all messages in Hebrew)
-│       └── lessonValidation.ts      ← createLessonSchema (includes optional image string, reused for updateLesson)
+│       ├── userValidation.ts        ← registerSchema, loginSchema, updatePhoneSchema, updateProfileSchema, changePasswordSchema (all messages in Hebrew)
+│       ├── lessonValidation.ts      ← createLessonSchema (includes optional image string, reused for updateLesson)
+│       └── cloudinaryImage.ts       ← shared cloudinaryImageSchema() Joi validator — used by both lesson `image` and user `profilePicture` fields
 └── oraita-web/
     ├── package.json                 ← frontend dependencies
     ├── .env                         ← VITE_API_URL=http://localhost:3000/api (gitignored)
@@ -112,22 +113,23 @@ FinalProject/
         ├── utils/
         │   └── lessonDate.ts        ← shared isLessonUpcoming() helper (single source of truth for past/upcoming)
         ├── components/
-        │   ├── Navbar.tsx           ← Bootstrap navbar + navLinks.map() + AuthContext
+        │   ├── Navbar.tsx           ← Bootstrap navbar + navLinks.map() + AuthContext; logged-in user name links to /profile
         │   ├── Footer.tsx           ← Bootstrap footer + FOOTER_LINKS.map()
         │   ├── Layout.tsx           ← wraps pages with Navbar + Footer
         │   ├── LessonCard.tsx       ← Bootstrap card + image fallback (Unsplash)
         │   ├── StatCard.tsx         ← reusable stat card (icon, count, label, iconBg prop)
-        │   ├── CommentCard.tsx      ← reusable comment card (authorName, date, text props)
+        │   ├── CommentCard.tsx      ← reusable comment card (authorName, authorPicture, date, text props) — small avatar via .avatar-sm
         │   └── PrivateRoute.tsx     ← redirects to /login if not authenticated
         └── pages/
             ├── HomePage.tsx         ← CITIES.map() + CATEGORIES.map() + Bootstrap sections
             ├── Login.tsx            ← Bootstrap card + form-control
             ├── Register.tsx         ← FIELDS.map() replaces 4 copy-pasted form groups
             ├── Dashboard.tsx        ← useDashboard hook + StatCard + TABS.map() + LessonRow
+            ├── Profile.tsx          ← protected /profile page — edit name/email/phone/profile picture (upload/replace/remove via /api/file, same pattern as CreateLesson) + separate change-password card
             ├── AllLessons.tsx       ← useLessons hook + CATEGORIES.map() + Bootstrap grid
             ├── CreateLesson.tsx     ← hidden file input + image preview + upload-then-submit flow; dual-mode create/edit (edit via /editlesson/:id)
-            ├── SingleLesson.tsx     ← useSingleLesson + useComments hooks + Bootstrap layout; edit button shown to creator; description rendered with white-space: pre-wrap
-            ├── TeacherProfile.tsx   ← useTeacherProfile hook + LessonCard + statBadges.map(); empty-state message specifies "upcoming"
+            ├── SingleLesson.tsx     ← useSingleLesson + useComments hooks + Bootstrap layout; edit button shown to creator; description rendered with white-space: pre-wrap; teacher card + comments show profile pictures
+            ├── TeacherProfile.tsx   ← useTeacherProfile hook + LessonCard + statBadges.map(); empty-state message specifies "upcoming"; avatar shows creator's profile picture when set
             └── NotFound.tsx         ← Bootstrap centered 404 page
 ```
 
@@ -147,6 +149,8 @@ Base URL: `http://localhost:3000/api`
 | POST | `/refresh` | ❌ | Get new access token |
 | POST | `/google` | ❌ | Google Sign-In — verifies credential, finds/creates user, returns tokens (+ phone + favorites) |
 | PATCH | `/phone` | ✅ | Update logged-in user's phone number (used by the post-Google-login "add phone?" prompt) |
+| PATCH | `/profile` | ✅ | Update logged-in user's name, email, phone, and profile picture (`/profile` page) — 400 Hebrew duplicate-email error if the new email is already taken by another user; `profilePicture` validated by the same `cloudinaryImageSchema()` as lesson images, empty string allowed to remove the picture |
+| PATCH | `/password` | ✅ | Change logged-in user's password — requires `currentPassword` (bcrypt-compared) + `newPassword` (min 6 chars); 400 Hebrew error on wrong current password |
 | PATCH | `/match-preference` | ✅ | Toggle `openToMatch` — opts the user in/out of the match-request feature. Turning it on requires a `gender` ('זכר'\|'נקבה') to be known (passed in this call, or already saved from before) — 400 otherwise |
 | POST | `/favorites/:lessonId` | ✅ | Add lesson to favorites |
 | DELETE | `/favorites/:lessonId` | ✅ | Remove lesson from favorites |
@@ -199,8 +203,9 @@ Authorization: Bearer <accessToken>
 
 ### User
 ```ts
-{ name, email, password (bcrypt), phone?, openToMatch (default false), gender?: 'זכר' | 'נקבה', favorites: [ObjectId→Lesson], refreshTokens: [string], timestamps }
+{ name, email, password (bcrypt), phone?, profilePicture? (Cloudinary secure_url, default ''), openToMatch (default false), gender?: 'זכר' | 'נקבה', favorites: [ObjectId→Lesson], refreshTokens: [string], timestamps }
 ```
+`profilePicture` is editable via `PATCH /api/users/profile` (upload/replace/remove — same Cloudinary flow as lesson images) and is visible to other users wherever a user's identity is shown: `TeacherProfile` avatar, `SingleLesson` teacher card, and comment rows.
 `gender` is required before `openToMatch` can be set to `true` (enforced in `updateMatchPreference`) — match requests are only ever offered between opposite genders.
 
 ### Lesson
@@ -237,11 +242,11 @@ One request per ordered pair while pending/accepted (enforced in the controller,
 5. To verify: open MongoDB Compass → `lessons` collection → find lesson → `image` field shows the `res.cloudinary.com/...` URL
 6. Frontend `<img src={lesson.image}>` loads directly from Cloudinary
 
-**Gaps raised by lecturer — fixed 2026-07-26 (see "Lecturer feedback" above):**
+**Gaps raised in review — fixed 2026-07-26 (see "Feedback received" above):**
 - ~~`POST /api/file` has no auth middleware~~ → now requires `authMiddleware`
 - ~~`image` field accepts any string~~ → now restricted to `res.cloudinary.com/<our cloud name>/...`
 
-**Remaining note (unrelated to lecturer feedback):**
+**Remaining note (unrelated to the feedback above):**
 - The old `public/`/`uploads/` static-serving routes in `app.ts` are kept only for backwards compatibility with any lesson documents that still reference pre-migration local image paths; new uploads never write there anymore
 
 ---
@@ -273,6 +278,15 @@ VITE_API_URL=http://localhost:3000/api
 
 ## Current State
 
+### ✅ Everything Working (as of 2026-08-06 — editable user profile)
+Added a personal profile update feature: users can edit their name, email, and phone, and upload/replace/remove a profile picture visible to other users. Password change was added too so the feature is complete ("everything can be edited").
+- **New protected page `/profile`** (`oraita-web/src/pages/Profile.tsx`, linked from the navbar via "שלום, {name} ⚙️") — one card edits name/email/phone/profile picture (`PATCH /api/users/profile`), a separate card changes password (`PATCH /api/users/password`, current-password verified via bcrypt before hashing the new one).
+- **Profile picture upload reuses the exact same Cloudinary flow as lesson images** — `Profile.tsx`'s `uploadImage()` is the same `POST /api/file` → Multer memory buffer → Cloudinary `upload_stream` pattern as `CreateLesson.tsx`; the returned `secure_url` is saved on the user document. Backend validation was refactored so both share one rule: extracted the inline Cloudinary-URL Joi check out of `lessonValidation.ts` into `server/validation/cloudinaryImage.ts` (`cloudinaryImageSchema()`), reused by both the lesson `image` field and the new user `profilePicture` field — only URLs from our own Cloudinary account (`https://res.cloudinary.com/<CLOUDINARY_CLOUD_NAME>/...`) are accepted for either.
+- **Picture is now visible to other users**, not just on the owner's own profile page: `TeacherProfile`'s avatar circle, `SingleLesson`'s teacher sidebar card, and each `CommentCard` row all render the uploaded picture when set (fallback to a `👤` placeholder otherwise). Required populating `profilePicture` alongside `name`/`email` on `lessonController`'s `creator` populate (both `getAllLessons` and `getLessonById`) and on `commentController`'s `user` populate.
+- **Email uniqueness enforced on edit** — `updateProfile` checks no other user already has the new email before saving, same Hebrew duplicate-email message as registration.
+- **Verified live** (temporary QA account, `test.profile.qa@example.com`, kept in the local dev DB): uploaded a picture → showed correctly on a comment after refresh and matches the same avatar circle used on `TeacherProfile`; removed the picture → reverted to placeholder everywhere; wrong current password on the password form → correct Hebrew rejection; correct current password → password actually changed (confirmed by logging out and back in with the new password); attempted to set email to an existing account's address → correctly rejected. `tsc --noEmit` clean on both `server/` and `oraita-web/`.
+- **Known pre-existing (unrelated) quirk noticed during this testing pass, not introduced by this change**: a freshly-submitted comment shows a blank author name/avatar until the page is refreshed — `useComments.ts`'s `addComment` prepends the raw unpopulated response from `POST /comments/:lessonId` (which only has `user: <ObjectId>`, not `{name, profilePicture}`) instead of re-fetching. Not fixed as part of this session since it's out of scope of this feature.
+
 ### ✅ Everything Working (as of 2026-08-02 — lesson deletion now cascades)
 - **Fixed: deleting a lesson left orphaned data behind** — `deleteLesson` (`server/controllers/lessonController.ts`) previously only removed the `Lesson` document itself. Any comments on it, match requests referencing it, or entries in other users' `favorites` arrays were left pointing at a lesson that no longer existed. Now, on delete, it also runs `Comment.deleteMany`, `MatchRequest.deleteMany`, and `User.updateMany` (`$pull` on `favorites`) scoped to that lesson's ID.
 - **Verified locally against real DB data**: deleted the `דוגמא` lesson (created by הודיה קקון) via the actual authenticated `DELETE /api/lessons/:id` endpoint; confirmed its 1 comment was removed (1 → 0) and the lesson itself was gone afterward. `tsc --noEmit` clean. Not yet verified against a lesson with an active favorite or match request (none existed on the test lesson) — logic is the same pattern as the comment cleanup, but that path hasn't been proven against real data yet.
@@ -301,7 +315,7 @@ VITE_API_URL=http://localhost:3000/api
 - **Nav order** — Navbar/Footer public links now read דף הבית → אודות → כל השיעורים.
 
 ### ✅ Everything Working (as of 2026-07-27 — "unique feature")
-- **Match requests ("unique feature" for the lecturer)** — TeacherProfile now shows a teacher's past lessons too (see below), and participants of a shared lesson who are both opted in (`openToMatch`) can request to connect; the recipient accepts/declines from a new Dashboard tab; phone numbers are only ever revealed after acceptance. Full design context in Session 12.
+- **Match requests (the project's "unique feature" requirement)** — TeacherProfile now shows a teacher's past lessons too (see below), and participants of a shared lesson who are both opted in (`openToMatch`) can request to connect; the recipient accepts/declines from a new Dashboard tab; phone numbers are only ever revealed after acceptance. Full design context in Session 12.
 - **Fixed a real privacy bug found while designing the above** — `GET /api/lessons/:id` (a public, unauthenticated route) used to return every participant's phone number to anyone who loaded the page, logged in or not. Participants are now populated with `name email openToMatch` only; phone numbers are exclusively delivered via `GET /api/matchrequests/me`, and only for accepted requests.
 - **TeacherProfile now shows past lessons** — new "שיעורים קודמים" tab (alongside "שיעורים קרובים"), so a teacher's star ratings (which can only exist on past lessons) are actually visible somewhere. Previously the page filtered to upcoming-only, which meant the "⭐ דירוג ממוצע" badge could never have data.
 
@@ -350,14 +364,14 @@ VITE_API_URL=http://localhost:3000/api
 2. **Mobile responsiveness** — never verified in an actual browser; do a manual check.
 3. **Delete dead code** — `server/middleware/upload.ts` (old pre-Cloudinary disk-storage Multer config) is unused by any route; safe to delete.
 4. Update README's "Live Demo" URLs now that the site is deployed (currently `_coming soon_`) — frontend `https://oraita.vercel.app`, backend `https://oraita-api.onrender.com`.
-5. **Compress `oraita-web/src/assets/about-banner.jpg`** — ~2.3MB in the production bundle (flagged Session 13), worth shrinking before the lecturer loads the live site.
+5. **Compress `oraita-web/src/assets/about-banner.jpg`** — ~2.3MB in the production bundle (flagged Session 13), worth shrinking before grading.
 6. Consider rotating the MongoDB Atlas database password — it was pasted in plaintext into a chat session while setting up Render env vars (2026-07-28). Not a code issue, just a "the value has been typed somewhere outside the .env file" hygiene note.
 
-### ✅ Lecturer feedback — implemented (2026-07-26)
+### ✅ Feedback received — implemented (2026-07-26)
 
-Lecturer's original note (paraphrased): Google auth architecture is sound, but must verify `email_verified` and confirm authentication via `GOOGLE_CLIENT_ID`. Cloudinary upload mechanism is not secure/authenticated (currently open) and the `image` field must be validated as an actual URL, or the app will have recurring image bugs.
+Feedback received (paraphrased): Google auth architecture is sound, but must verify `email_verified` and confirm authentication via `GOOGLE_CLIENT_ID`. Cloudinary upload mechanism is not secure/authenticated (currently open) and the `image` field must be validated as an actual URL, or the app will have recurring image bugs.
 
-Open sub-questions from 2026-07-13 were resolved directly with the user (not the lecturer) on 2026-07-26 so implementation could proceed: (a) upload auth → blanket `authMiddleware`, not scoped to lesson-creation; (b) Google auth → also add the fail-closed `GOOGLE_CLIENT_ID` guard.
+Open sub-questions from 2026-07-13 were resolved directly with the user on 2026-07-26 so implementation could proceed: (a) upload auth → blanket `authMiddleware`, not scoped to lesson-creation; (b) Google auth → also add the fail-closed `GOOGLE_CLIENT_ID` guard.
 
 **4. Google auth — `email_verified` + fail-closed `GOOGLE_CLIENT_ID` guard**
 - File: `server/controllers/userController.ts`, `googleSignin`
@@ -371,7 +385,7 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 **6. Cloudinary upload — `image` restricted to our Cloudinary account**
 - File: `server/validation/lessonValidation.ts`
 - Replaced `image: Joi.string().allow('').optional()` with `Joi.string().uri({ scheme: ['https'] }).allow('').optional().custom(...)`: the `.uri()` call validates the value is a well-formed HTTPS URI (rejects malformed strings — stray spaces, control characters — even if they happen to share the right prefix), and the `.custom()` validator additionally checks it starts with `https://res.cloudinary.com/<CLOUDINARY_CLOUD_NAME>/` (cloud name read from `process.env` at request time, not baked in at module load — avoids a dotenv/import-order footgun). Both error paths (`string.uri`, `string.uriCustomScheme`, `any.invalid`) map to the Hebrew message `"כתובת התמונה אינה תקינה"`. Same schema is reused by both create and `PATCH /:id`, so one change covers both.
-- Added 2026-07-26 after reviewing the lecturer's detailed written explanation (Level A vs. Level B tradeoff — he recommended Level B: `Joi.string().uri({scheme:['https']}).pattern(/^https:\/\/res\.cloudinary\.com\//)`). Our cloud-name-specific check is already stricter than his example (his only checks the bare domain); the one piece his example had that ours didn't was the `.uri()` structural check, now added.
+- Added 2026-07-26 after reviewing a detailed written explanation of the Level A vs. Level B tradeoff, with a recommendation for Level B: `Joi.string().uri({scheme:['https']}).pattern(/^https:\/\/res\.cloudinary\.com\//)`. Our cloud-name-specific check is already stricter than that example (it only checks the bare domain); the one piece that example had that ours didn't was the `.uri()` structural check, now added.
 
 **Verified live** (temporary QA account, deleted after): `POST /api/file` without token → 401; with token, no file → 400 (passes auth, fails at multer as expected); `POST /api/lessons` with a non-Cloudinary `image` URL → 400 validation error; with a `res.cloudinary.com/<real cloud name>/...` URL → 201 created. `tsc --noEmit` clean.
 
@@ -521,18 +535,18 @@ Open sub-questions from 2026-07-13 were resolved directly with the user (not the
 
 ## Session Log
 
-### Session 16 (2026-08-02) — Lecturer Q&A Prep + Lesson-Deletion Cascade Fix
+### Session 16 (2026-08-02) — Q&A Prep + Lesson-Deletion Cascade Fix
 
 #### Context
-Shani is preparing to explain the codebase to her lecturer and worked through a series of "where is X and how do I explain it" questions: where `VITE_API_URL` is set (local `.env` vs. Vercel dashboard, and why the Vercel Sensitive-value field shows blank/placeholder — expected behavior, not a bug), where the API base URL is configured in code (`oraita-web/src/services/api.ts`), what `StrictMode`/`GoogleOAuthProvider`/Redux are and where they live (`main.tsx`, `store/`), where the MongoDB connection happens (`server/server.ts`), the Vercel/Render/Atlas three-tier architecture (frontend host vs. backend server vs. database — clarified that "the server" specifically means Render, not Atlas), and how to actually retrieve the real Atlas connection string (not stored anywhere in the repo — only in Render's env vars and Atlas itself).
+Shani is preparing to explain the codebase and worked through a series of "where is X and how do I explain it" questions: where `VITE_API_URL` is set (local `.env` vs. Vercel dashboard, and why the Vercel Sensitive-value field shows blank/placeholder — expected behavior, not a bug), where the API base URL is configured in code (`oraita-web/src/services/api.ts`), what `StrictMode`/`GoogleOAuthProvider`/Redux are and where they live (`main.tsx`, `store/`), where the MongoDB connection happens (`server/server.ts`), the Vercel/Render/Atlas three-tier architecture (frontend host vs. backend server vs. database — clarified that "the server" specifically means Render, not Atlas), and how to actually retrieve the real Atlas connection string (not stored anywhere in the repo — only in Render's env vars and Atlas itself).
 
 #### Real gap found and fixed: lesson deletion didn't cascade
-While explaining what `DELETE /api/lessons/:id` does, reviewed `deleteLesson` and found it only ran `Lesson.findByIdAndDelete` — comments, match requests, and favorites referencing that lesson were never cleaned up, leaving orphaned data behind (dangling `favorites` entries, comments/match-requests pointing at a nonexistent lesson). Shani wanted this fixed before demonstrating a delete to her lecturer.
+While explaining what `DELETE /api/lessons/:id` does, reviewed `deleteLesson` and found it only ran `Lesson.findByIdAndDelete` — comments, match requests, and favorites referencing that lesson were never cleaned up, leaving orphaned data behind (dangling `favorites` entries, comments/match-requests pointing at a nonexistent lesson). Shani wanted this fixed before demonstrating a delete live.
 - `server/controllers/lessonController.ts` (`deleteLesson`) — after deleting the lesson, now also runs `Comment.deleteMany({ lesson })`, `MatchRequest.deleteMany({ lesson })`, and `User.updateMany({ favorites: lesson }, { $pull: { favorites: lesson } })`, all scoped to the deleted lesson's ObjectId.
 - Verified live against the real local dev DB: started the backend locally, found the `דוגמא` ("Example") lesson (creator: הודיה קקון), snapshotted related data first (1 comment, 0 match requests, 0 favorites referencing it), minted a short-lived JWT for the creator using the local `TOKEN_SECRET` (same payload shape `authMiddleware` expects) to call the real authenticated endpoint without needing her password, deleted it via `DELETE /api/lessons/:id`, then re-ran the snapshot: lesson gone, comment count 1 → 0. `tsc --noEmit` clean.
 - **Caveat**: the favorites/match-request cleanup paths weren't exercised against real data (this particular test lesson had none in those two categories) — same code pattern as the verified comment cleanup, but not independently proven yet.
 - **Not committed yet** — change exists only in the local working tree as of this session; see `git status`. Suggested commit message: `Fix deleteLesson to also remove its comments, match requests, and favorites` (kept separate from two unrelated pre-existing uncommitted tweaks in `oraita-web/src/services/api.ts` and `server/controllers/userController.ts`).
-- Also note: the `דוגמא` lesson used for verification is now actually gone from the local dev DB — recreate a similar lesson (ideally with a favorite + comment + match request attached) before demoing this live to the lecturer, to prove all three cleanup paths at once.
+- Also note: the `דוגמא` lesson used for verification is now actually gone from the local dev DB — recreate a similar lesson (ideally with a favorite + comment + match request attached) before demoing this live, to prove all three cleanup paths at once.
 
 ### Session 15 (2026-07-30) — Deployment Debugging Marathon: Domain Rename, Google Auth, SPA Routing, PrivateRoute White Screen
 
@@ -587,7 +601,7 @@ Shani felt the Dashboard ("לוח בקרה") and All Lessons ("כל השיעור
 - Not yet visually confirmed in a real browser — the Claude-in-Chrome extension wasn't connected this session. Shani to review live and give feedback; explicitly told this is a first attempt to iterate on, not a final answer.
 
 #### Deployment — started (Atlas ✅, Render ✅, Vercel not yet started)
-Walked through the deployment guide interactively, one phase at a time, at Shani's request (to also be able to explain the process to the lecturer afterward).
+Walked through the deployment guide interactively, one phase at a time, at Shani's request (to also be able to explain the deployment process afterward).
 - **MongoDB Atlas** — free M0 cluster created, database user created, Network Access opened to `0.0.0.0/0` (required since Render has no fixed IP to whitelist), connection string built (`mongodb+srv://.../oraita_db?retryWrites=true&w=majority`).
 - **Render (backend)** — Web Service created from the `final-project` GitHub repo (root directory left blank, since the backend lives at the repo root, not a subfolder). All env vars copied from `server/.env`, plus `CLIENT_URL` set to a temporary `http://localhost:5173` placeholder (to be updated once Vercel exists) and `NODE_ENV=production`.
   - **Build failure, real root cause found and fixed**: first deploy failed with `Cannot find module 'express'` / `'mongoose'` / `Cannot find name 'process'`. Verified this was **not** a `dependencies`/`devDependencies` placement issue (`@types/node`, `@types/express`, `@types/jsonwebtoken`, `@types/cors`, `@types/bcrypt` are all correctly in `devDependencies`) — the actual cause was that the Build Command was set to just `npm run build` (per the original deployment guide), and Render does **not** automatically run `npm install` before a custom Build Command. Fixed by changing the Build Command to `npm install && npm run build`; build succeeded. Deployment guide above and Known Issue #8 updated so this doesn't repeat.
@@ -597,7 +611,7 @@ Walked through the deployment guide interactively, one phase at a time, at Shani
 ### Session 12 (2026-07-27) — TeacherProfile Past Lessons + Match Requests ("Unique Feature")
 
 #### Context
-Lecturer asked for something unique on the project, beyond standard CRUD. Brainstormed with Shani around the site's mixed-gender lesson registration and landed on a lightweight, consent-gated "match request" feature between participants who share a lesson — scoped deliberately small (no bios/photos/profile pages) so it doesn't compete with the lesson platform for focus.
+The project brief called for something unique, beyond standard CRUD. Brainstormed with Shani around the site's mixed-gender lesson registration and landed on a lightweight, consent-gated "match request" feature between participants who share a lesson — scoped deliberately small (no bios/photos/profile pages) so it doesn't compete with the lesson platform for focus.
 
 #### TeacherProfile — past lessons now visible
 - While investigating, found that `useTeacherProfile.ts` filtered to upcoming lessons only, and since ratings can only exist on *past* lessons, the "⭐ דירוג ממוצע" badge on a teacher's profile could never actually have data — a real gap between two individually-correct features.
@@ -723,7 +737,7 @@ Shani asked for the "אורייתא" wordmark to be much larger (it was a small 
 - ✅ Fixed in `hooks/useLessons.ts` — `lesson.date.split('T')[0]` extracts `YYYY-MM-DD` before combining with time → past-lesson filter now actually works in AllLessons
 - ✅ Fixed in `hooks/useTeacherProfile.ts` — same fix → TeacherProfile now correctly shows future lessons only
 
-#### Google Login (Lecturer's Approach)
+#### Google Login (Recommended Approach)
 - ✅ Installed `google-auth-library` (backend) and `@react-oauth/google` (frontend)
 - ✅ Created Google Cloud project + OAuth 2.0 Client ID (authorized origins: `http://localhost:5173`, `http://localhost`)
 - ✅ `server/controllers/userController.ts` — added `googleSignin`:
@@ -774,7 +788,7 @@ Shani asked for the "אורייתא" wordmark to be much larger (it was a small 
 - Changing a rating updates the existing entry (count stays constant)
 - All guard cases rejected: non-participant, invalid value, future lesson
 
-### Session 4 (2026-06-26) — Image Upload (Lecturer's Approach)
+### Session 4 (2026-06-26) — Image Upload (Recommended Approach)
 - ✅ Created `server/routes/file_routes.ts` — dedicated upload endpoint
   - Multer saves to `public/` folder (relative to CWD = project root)
   - Returns `{ url: "http://localhost:3000/public/filename.jpg" }`
@@ -857,7 +871,7 @@ Shani asked for the "אורייתא" wordmark to be much larger (it was a small 
 
 ### Session 11 (2026-07-27) — Full Rubric Audit + README Rewrite
 
-Shani asked for a full pass against the instructor's official grading guide (`Adv. FullStack - Final Project Guide.pdf`, found alongside the other course PDFs) before continuing to add real content to the live site — not lecturer feedback this time, a self-directed readiness check.
+Shani asked for a full pass against the instructor's official grading guide (`Adv. FullStack - Final Project Guide.pdf`, found alongside the other course PDFs) before continuing to add real content to the live site — not feedback-driven this time, a self-directed readiness check.
 
 #### Audit findings
 - Cross-checked the actual grading rubric (Backend 25 / DB 15 / Auth 20 / Frontend 20 / UI-UX 10 / Deployment 5 / Git+README 5) against real code and docs, not just PROGRESS.md's own claims.
@@ -871,28 +885,28 @@ Shani asked for a full pass against the instructor's official grading guide (`Ad
 - Added a "Screenshots" section (currently a placeholder — real screenshots still need to be captured) and a "Team" section (solo project, matches rubric's "Team Members & Roles" requirement).
 - Left "Live Demo" URLs as `_coming soon_` since deployment hasn't happened yet — will need a follow-up edit once Atlas/Render/Vercel are live.
 
-### Session 9 (2026-07-13) — Lecturer Feedback Review + Docs Correction
+### Session 9 (2026-07-13) — Feedback Review + Docs Correction
 
-#### Lecturer feedback received
+#### Feedback received
 Two points on the current implementation:
 1. **Google auth** — architecture sound, but needs an `email_verified` check on the Google token payload, plus confirmation the token is authenticated against `GOOGLE_CLIENT_ID`.
 2. **Cloudinary upload** — the upload mechanism isn't secure/authenticated (currently open), and the `image` field needs to be validated as an actual URL.
 
 #### Investigation (no code changes made yet)
-- Confirmed `googleSignin` (`server/controllers/userController.ts`) already passes `audience: process.env.GOOGLE_CLIENT_ID` to `verifyIdToken` — that half of the lecturer's Google-auth ask is already satisfied. The real gap is `payload?.email_verified`, which is never checked.
-- Confirmed `POST /api/file` (`server/routes/file_routes.ts`) has no auth middleware — open to unauthenticated requests, matching the lecturer's note exactly.
+- Confirmed `googleSignin` (`server/controllers/userController.ts`) already passes `audience: process.env.GOOGLE_CLIENT_ID` to `verifyIdToken` — that half of the Google-auth ask is already satisfied. The real gap is `payload?.email_verified`, which is never checked.
+- Confirmed `POST /api/file` (`server/routes/file_routes.ts`) has no auth middleware — open to unauthenticated requests, matching the note exactly.
 - Confirmed `image` field in `server/validation/lessonValidation.ts` is `Joi.string().allow('').optional()` — accepts any string, not validated as a URL.
-- Sent the lecturer clarifying questions before implementing (scope of the `GOOGLE_CLIENT_ID` fail-closed check; whether upload auth should be general-login-gated or narrower; whether URL validation should be generic `Joi.string().uri()` or restricted to the Cloudinary domain specifically, since images are only ever supposed to originate from our own Cloudinary account). Awaiting reply.
+- Sent clarifying questions before implementing (scope of the `GOOGLE_CLIENT_ID` fail-closed check; whether upload auth should be general-login-gated or narrower; whether URL validation should be generic `Joi.string().uri()` or restricted to the Cloudinary domain specifically, since images are only ever supposed to originate from our own Cloudinary account). Awaiting reply.
 
-#### Docs correction (unrelated to the lecturer's note, found while investigating)
+#### Docs correction (unrelated to the note above, found while investigating)
 - Discovered `PROGRESS.md` still documented the original local-disk Multer upload flow (images saved to `FinalProject/public/`), but the codebase had already migrated to Cloudinary (`server/routes/file_routes.ts` uses `cloudinary.uploader.upload_stream`, `cloudinary` is in `package.json`, `CLOUDINARY_*` env vars are in `.env.example`). Confirmed via `git log` that this migration is already committed (part of commit `9700e3e`, "Add content image and Google OAuth login") — not in-progress work, just a docs gap from that session.
 - Also found `middleware/upload.ts` (the old disk-storage Multer config) is now fully dead code — not imported anywhere, since `file_routes.ts` has its own inline `memoryStorage` config.
 - Also found `SERVER_URL` env var is no longer referenced anywhere in the code (was only needed to build local `/public/...` URLs under the old flow; Cloudinary returns absolute URLs directly).
-- Updated: Tech Stack table, folder structure comments, API endpoint table, "Image Upload Flow" section (rewritten for Cloudinary), Environment Variables section, Deployment Guide (Render env vars + ephemeral-disk note), Known Issue #3 (marked resolved), and added the two lecturer-flagged gaps to a new "Still To Do" entry so they don't get lost before the lecturer replies.
+- Updated: Tech Stack table, folder structure comments, API endpoint table, "Image Upload Flow" section (rewritten for Cloudinary), Environment Variables section, Deployment Guide (Render env vars + ephemeral-disk note), Known Issue #3 (marked resolved), and added the two flagged gaps to a new "Still To Do" entry so they don't get lost before a reply arrives.
 
-#### Lecturer reply received (image URL validation question only)
-- Lecturer confirmed: images should always come from Cloudinary (upload → `secure_url` → passed to lesson creation), but nothing on the server currently enforces that link — `POST /api/lessons` / `PATCH /api/lessons/:id` accept `image` as a free JSON string, so right now any string is accepted, including an arbitrary external URL.
-- His answer: use the **Cloudinary-domain-restricted** validation (`res.cloudinary.com/<cloud_name>/...`), not a generic `Joi.string().uri()` check — the generic check would still let through non-Cloudinary URLs, which is weaker than the app's actual intended design.
+#### Reply received (image URL validation question only)
+- Confirmed: images should always come from Cloudinary (upload → `secure_url` → passed to lesson creation), but nothing on the server currently enforces that link — `POST /api/lessons` / `PATCH /api/lessons/:id` accept `image` as a free JSON string, so right now any string is accepted, including an arbitrary external URL.
+- The answer: use the **Cloudinary-domain-restricted** validation (`res.cloudinary.com/<cloud_name>/...`), not a generic `Joi.string().uri()` check — the generic check would still let through non-Cloudinary URLs, which is weaker than the app's actual intended design.
 - This resolves the URL-validation half of the original Cloudinary question. Recorded as item 6 in "Still To Do" above, marked ready to implement.
 - **Still waiting on:** (a) whether `POST /api/file` auth should be a blanket login check or scoped narrower to lesson creation, (b) whether the Google auth fix needs an added fail-closed guard for a missing `GOOGLE_CLIENT_ID`. Nothing should be implemented for those two until he replies.
 
@@ -906,10 +920,10 @@ Two points on the current implementation:
 - User hit `"Too many requests, please try again after 15 minutes."` on the All Lessons page — traced to `apiLimiter` in `server/middleware/rateLimiter.ts` (100 requests/15min per IP, applied to all of `/api/*` in `app.ts:46`), tripped by the volume of curl requests used to verify the fixes above against the local dev server. Not a code issue; resets automatically after the time window. Offered to raise the local limit or exempt development mode if it becomes disruptive during testing — no decision made yet.
 - **It happened again from real (non-curl) usage in Session 12** — see that section for the actual fix: `apiLimiter.max` raised to 300, and a genuine bug fixed where `Navbar`'s match-request badge was re-fetching on every single page navigation.
 
-### Session 10 (2026-07-26 – 2026-07-27) — Lecturer Feedback Items 4-6 Implemented + Verified + Refined
+### Session 10 (2026-07-26 – 2026-07-27) — Feedback Items 4-6 Implemented + Verified + Refined
 
 #### Implementation
-The two open sub-questions from Session 9 (blanket vs. scoped upload auth; whether to add the `GOOGLE_CLIENT_ID` fail-closed guard) were still unanswered by the lecturer, so they were put to Shani directly to decide rather than blocking further — she chose blanket `authMiddleware` for uploads and confirmed the fail-closed guard should be added.
+The two open sub-questions from Session 9 (blanket vs. scoped upload auth; whether to add the `GOOGLE_CLIENT_ID` fail-closed guard) were still unanswered, so they were put to Shani directly to decide rather than blocking further — she chose blanket `authMiddleware` for uploads and confirmed the fail-closed guard should be added.
 
 - `server/controllers/userController.ts` (`googleSignin`) — added a 500 guard when `GOOGLE_CLIENT_ID` is unset before calling `verifyIdToken`, and added `!payload.email_verified` to the existing email check
 - `server/routes/file_routes.ts` — added `authMiddleware` to `POST /api/file`; unauthenticated uploads now 401
@@ -924,9 +938,9 @@ Shani asked how to actually *check* (not just read) that the `email_verified` an
 - **`email_verified`** — wrote a throwaway script (`qa_test_email_verified.ts`, deleted after) that monkey-patches `OAuth2Client.prototype.verifyIdToken` and calls the real `googleSignin` function directly with a mocked payload: `email_verified: false` → `400 "Invalid Google token"`, no user created in DB; `email_verified: true` → `200`, user created normally. Both test users deleted afterward.
 - **`GOOGLE_CLIENT_ID`** — live-tested against the actual running dev server: temporarily commented out `GOOGLE_CLIENT_ID` in `server/.env`, killed and restarted the backend (`ts-node-dev`, PID captured via `netstat`/`taskkill`), confirmed a Google login attempt now returns `500 "Google login is not configured"`. Restored the env var, restarted again, confirmed normal behavior (`400 "Google authentication failed"` for a fake token — Google's own verification failing, not the config guard).
 
-#### Image validation refined after lecturer's detailed written explanation
-Lecturer sent a fuller explanation of Level A (`Joi.string().uri()` only) vs. Level B (Cloudinary-domain-restricted), with his own example code including `Joi.string().uri({ scheme: ['https'] }).pattern(/^https:\/\/res\.cloudinary\.com\//)`. Compared against our implementation:
-- Our cloud-name-specific check (`.../dm0dy48um/...`) is already *stricter* than his example, which only checks the bare `res.cloudinary.com` domain — no change needed there.
+#### Image validation refined after detailed written feedback
+Received a fuller explanation of Level A (`Joi.string().uri()` only) vs. Level B (Cloudinary-domain-restricted), including example code with `Joi.string().uri({ scheme: ['https'] }).pattern(/^https:\/\/res\.cloudinary\.com\//)`. Compared against our implementation:
+- Our cloud-name-specific check (`.../dm0dy48um/...`) is already *stricter* than that example, which only checks the bare `res.cloudinary.com` domain — no change needed there.
 - We were missing his `.uri({ scheme: ['https'] })` structural check, which rejects malformed strings (stray spaces, control characters) even if they happen to share the right domain prefix. Discussed the tradeoff (cheap to add, no legitimate case it would break) and added it.
 - A separate suggestion (from another AI tool Shani consulted) to duplicate the Cloudinary check inside `lessonController.ts`'s `createLesson`/`updateLesson` was evaluated and rejected: both routes already run `validate(createLessonSchema)` before the controller executes, so the duplicate check could never fire (dead code), and its proposed regex (domain-only, no cloud name) was weaker than what's already enforced.
 - `server/validation/lessonValidation.ts` — added `.uri({ scheme: ['https'] })` ahead of the existing `.custom()` cloud-name check; discovered the scheme-mismatch error uses Joi's `string.uriCustomScheme` code (not `string.uri`) and added that message mapping too, otherwise it silently fell back to Joi's default English text.

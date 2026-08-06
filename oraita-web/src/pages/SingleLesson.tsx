@@ -230,6 +230,7 @@ function SingleLesson() {
                                         <CommentCard
                                             key={c._id}
                                             authorName={c.user?.name}
+                                            authorPicture={c.user?.profilePicture}
                                             date={new Date(c.createdAt).toLocaleDateString('he-IL')}
                                             text={c.text}
                                         />
@@ -325,7 +326,11 @@ function SingleLesson() {
                             {/* Teacher card */}
                             <div className="card border-0 shadow-sm text-center mb-3">
                                 <div className="card-body py-4">
-                                    <div className="fs-1 mb-2">👤</div>
+                                    <div className="profile-avatar" style={{ width: 72, height: 72, fontSize: '2rem', margin: '0 auto 12px' }}>
+                                    {lesson.creator.profilePicture ? (
+                                        <img src={lesson.creator.profilePicture} alt={lesson.creator.name} />
+                                    ) : '👤'}
+                                </div>
                                     <Link
                                         to={`/teacherprofile/${lesson.creator._id}`}
                                         className="fw-bold fs-5 text-dark text-decoration-none d-block mb-2"

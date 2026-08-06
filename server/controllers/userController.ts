@@ -199,7 +199,8 @@ export const loginUser = async (
                 phone: user.phone,
                 openToMatch: user.openToMatch,
                 gender: user.gender,
-                favorites: user.favorites
+                favorites: user.favorites,
+                profilePicture: user.profilePicture
             }
         });
     } catch (error) {
@@ -567,7 +568,7 @@ export const googleSignin = async (req: Request, res: Response) => {
             success: true,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, openToMatch: user.openToMatch, gender: user.gender, favorites: user.favorites },
+            user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, openToMatch: user.openToMatch, gender: user.gender, favorites: user.favorites, profilePicture: user.profilePicture },
         });
     } catch (err) {
         return res.status(400).json({ success: false, message: 'Google authentication failed' });
@@ -592,6 +593,93 @@ export const updatePhone = async (req: Request, res: Response) => {
         return res.status(200).json({
             success: true,
             user: { _id: user._id, name: user.name, email: user.email, phone: user.phone },
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+// Update the logged-in user's editable profile fields (name, email, phone, profile picture)
+export const updateProfile = async (req: Request, res: Response) => {
+    const userId = req.userId as string;
+    const { name, email, phone, profilePicture } = req.body;
+
+    try {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        if (email !== user.email) {
+            const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'קיים כבר משתמש עם כתובת אימייל זו'
+                });
+            }
+        }
+
+        user.name = name;
+        user.email = email;
+        user.phone = phone;
+        user.profilePicture = profilePicture;
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                openToMatch: user.openToMatch,
+                gender: user.gender,
+                favorites: user.favorites,
+                profilePicture: user.profilePicture
+            }
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+// Change the logged-in user's password
+export const changePassword = async (req: Request, res: Response) => {
+    const userId = req.userId as string;
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const validPassword = await bcrypt.compare(currentPassword, user.password);
+        if (!validPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'הסיסמה הנוכחית שגויה'
+            });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'הסיסמה עודכנה בהצלחה'
         });
     } catch (error) {
         return res.status(400).json({

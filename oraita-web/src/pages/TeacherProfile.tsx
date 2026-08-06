@@ -14,7 +14,7 @@ const TABS: { key: Tab; label: string }[] = [
 function TeacherProfile() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { upcomingLessons, pastLessons, loading, error, creatorName, cities, avgRating, totalCount } = useTeacherProfile(id);
+    const { upcomingLessons, pastLessons, loading, error, creatorName, creatorPicture, cities, avgRating, totalCount } = useTeacherProfile(id);
     const [activeTab, setActiveTab] = useState<Tab>('upcoming');
 
     if (loading) return <Layout><p className="text-center mt-5">טוען...</p></Layout>;
@@ -63,7 +63,9 @@ function TeacherProfile() {
                         ← חזרה
                     </button>
 
-                    <div className="profile-avatar">👤</div>
+                    <div className="profile-avatar">
+                        {creatorPicture ? <img src={creatorPicture} alt={creatorName} /> : '👤'}
+                    </div>
 
                     <h1 className="fw-bold mb-3">{creatorName}</h1>
 

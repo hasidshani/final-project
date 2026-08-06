@@ -11,7 +11,7 @@ export interface Lesson {
     date: string;
     time: string;
     image: string;
-    creator: { _id: string; name: string; email: string };
+    creator: { _id: string; name: string; email: string; profilePicture?: string };
     participants: string[];
     maxParticipants: number;
     rating: number;

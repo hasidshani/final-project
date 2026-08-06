@@ -10,13 +10,15 @@ import {
     removeFavorite,
     googleSignin,
     updatePhone,
+    updateProfile,
+    changePassword,
     updateMatchPreference
 } from '../controllers/userController';
 
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authLimiter } from '../middleware/rateLimiter';
 import validate from '../middleware/validate';
-import { registerSchema, loginSchema, updatePhoneSchema, updateMatchPreferenceSchema } from '../validation/userValidation';
+import { registerSchema, loginSchema, updatePhoneSchema, updateProfileSchema, changePasswordSchema, updateMatchPreferenceSchema } from '../validation/userValidation';
 
 const router = express.Router();
 
@@ -40,6 +42,12 @@ router.post('/google', googleSignin);
 
 // Update logged-in user's phone number
 router.patch('/phone', authMiddleware, validate(updatePhoneSchema), updatePhone);
+
+// Update logged-in user's editable profile fields (name, email, phone, profile picture)
+router.patch('/profile', authMiddleware, validate(updateProfileSchema), updateProfile);
+
+// Change logged-in user's password
+router.patch('/password', authMiddleware, validate(changePasswordSchema), changePassword);
 
 // Update logged-in user's match-request opt-in preference
 router.patch('/match-preference', authMiddleware, validate(updateMatchPreferenceSchema), updateMatchPreference);

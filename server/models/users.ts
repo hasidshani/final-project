@@ -10,6 +10,8 @@ export interface IUser extends Document {
     password: string;
     // Optional phone number
     phone?: string;
+    // Optional profile picture (Cloudinary secure_url), visible to other users
+    profilePicture?: string;
     // Whether the user is open to being introduced to other participants
     // they share a lesson with (drives the match-request feature)
     openToMatch: boolean;
@@ -44,6 +46,11 @@ const userSchema = new Schema<IUser>({
     // Optional phone number
     phone: {
         type: String
+    },
+    // Optional profile picture (Cloudinary secure_url), visible to other users
+    profilePicture: {
+        type: String,
+        default: ''
     },
     // Whether the user is open to being introduced to other participants
     // they share a lesson with (drives the match-request feature)

@@ -4,7 +4,7 @@ import api from '../services/api';
 export interface Comment {
     _id: string;
     text: string;
-    user: { _id: string; name: string };
+    user: { _id: string; name: string; profilePicture?: string };
     createdAt: string;
 }
 

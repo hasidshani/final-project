@@ -74,7 +74,7 @@ export const getCommentsByLesson = async (
             })
             .populate(
                 'user',
-                'name'
+                'name profilePicture'
             )
             .sort({
                 createdAt: -1
