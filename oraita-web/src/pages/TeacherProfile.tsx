@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LessonCard from '../components/LessonCard';
+import ImageLightbox from '../components/ImageLightbox';
 import { useTeacherProfile } from '../hooks/useTeacherProfile';
 
 type Tab = 'upcoming' | 'past';
@@ -16,6 +17,7 @@ function TeacherProfile() {
     const navigate = useNavigate();
     const { upcomingLessons, pastLessons, loading, error, creatorName, creatorPicture, cities, avgRating, totalCount } = useTeacherProfile(id);
     const [activeTab, setActiveTab] = useState<Tab>('upcoming');
+    const [lightboxOpen, setLightboxOpen] = useState(false);
 
     if (loading) return <Layout><p className="text-center mt-5">טוען...</p></Layout>;
 
@@ -63,7 +65,10 @@ function TeacherProfile() {
                         ← חזרה
                     </button>
 
-                    <div className="profile-avatar">
+                    <div
+                        className={`profile-avatar${creatorPicture ? ' clickable' : ''}`}
+                        onClick={() => creatorPicture && setLightboxOpen(true)}
+                    >
                         {creatorPicture ? <img src={creatorPicture} alt={creatorName} /> : '👤'}
                     </div>
 
@@ -129,6 +134,14 @@ function TeacherProfile() {
                     <Link to="/alllessons" className="btn btn-outline-dark">חזרה לכל השיעורים</Link>
                 </div>
             </main>
+
+            {lightboxOpen && creatorPicture && (
+                <ImageLightbox
+                    src={creatorPicture}
+                    alt={creatorName}
+                    onClose={() => setLightboxOpen(false)}
+                />
+            )}
         </Layout>
     );
 }

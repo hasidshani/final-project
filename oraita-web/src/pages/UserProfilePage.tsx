@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import ImageLightbox from '../components/ImageLightbox';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -20,6 +21,7 @@ function UserProfilePage() {
     const [profile, setProfile] = useState<PublicProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError]     = useState('');
+    const [lightboxOpen, setLightboxOpen] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -58,7 +60,10 @@ function UserProfilePage() {
                         ← חזרה
                     </button>
 
-                    <div className="profile-avatar">
+                    <div
+                        className={`profile-avatar${profile.profilePicture ? ' clickable' : ''}`}
+                        onClick={() => profile.profilePicture && setLightboxOpen(true)}
+                    >
                         {profile.profilePicture ? <img src={profile.profilePicture} alt={profile.name} /> : '👤'}
                     </div>
 
@@ -75,6 +80,14 @@ function UserProfilePage() {
             </div>
 
             <div className="py-5" />
+
+            {lightboxOpen && profile.profilePicture && (
+                <ImageLightbox
+                    src={profile.profilePicture}
+                    alt={profile.name}
+                    onClose={() => setLightboxOpen(false)}
+                />
+            )}
         </Layout>
     );
 }

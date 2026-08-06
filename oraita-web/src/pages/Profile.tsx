@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import Layout from '../components/Layout';
 import AvatarCropper from '../components/AvatarCropper';
+import ImageLightbox from '../components/ImageLightbox';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -28,6 +29,7 @@ function Profile() {
     const [imgSrc, setImgSrc]       = useState(user?.profilePicture ?? '');
     const [pictureRemoved, setPictureRemoved] = useState(false);
     const [cropFile, setCropFile]   = useState<File | null>(null);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
     const [profileError, setProfileError]     = useState('');
     const [profileSuccess, setProfileSuccess] = useState('');
     const [savingProfile, setSavingProfile]   = useState(false);
@@ -161,7 +163,11 @@ function Profile() {
 
                                     <div className="d-flex flex-column align-items-center gap-2 mb-2">
                                         <div className="position-relative">
-                                            <div className="profile-avatar" style={{ margin: 0 }}>
+                                            <div
+                                                className={`profile-avatar${imgSrc ? ' clickable' : ''}`}
+                                                style={{ margin: 0 }}
+                                                onClick={() => imgSrc && setLightboxOpen(true)}
+                                            >
                                                 {imgSrc ? (
                                                     <img src={imgSrc} alt="תצוגה מקדימה" />
                                                 ) : (
@@ -312,6 +318,14 @@ function Profile() {
                     file={cropFile}
                     onConfirm={handleCropConfirm}
                     onCancel={handleCropCancel}
+                />
+            )}
+
+            {lightboxOpen && imgSrc && (
+                <ImageLightbox
+                    src={imgSrc}
+                    alt="תמונת פרופיל"
+                    onClose={() => setLightboxOpen(false)}
                 />
             )}
         </Layout>
