@@ -32,7 +32,7 @@ function TeacherProfile() {
 
     if (totalCount === 0) return (
         <Layout>
-            <p className="text-center mt-5">לא נמצאו שיעורים עבור מורה זה</p>
+            <p className="text-center mt-5">לא נמצאו שיעורים עבור משתמש זה</p>
             <div className="text-center mt-3">
                 <Link to="/alllessons" className="btn btn-dark">חזרה לכל השיעורים</Link>
             </div>
